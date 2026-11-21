@@ -1,4 +1,4 @@
-# Battlecraft — Ultimo in piedi
+# Battlecraft
 
 Battle royale in terza persona con costruzioni, nel browser. Isola cartoon, 30 giocatori
 (tu + 29 bot), lancio dal bus col deltaplano, armi, raccolta materiali, costruzioni e zona

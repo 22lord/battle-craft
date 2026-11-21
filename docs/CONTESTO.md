@@ -21,7 +21,7 @@ finalmente verificare.
 - **Non ci sono più due progetti.** Nella v93 dentro l'HTML ci sono `MARE = 0`,
   `RAGGIO_ISOLA = 150`, `MAPPA = 440`, `CITTA`, `CRESTA`, i tre `LAGHI` (Lago Grande,
   Lago Alto, Laguna), i `PATHS` e i materiali `MX`: è il terreno della mappa v6 dentro il
-  gioco. Il titolo della pagina è «BATTLECRAFT — Ultimo in piedi».
+  gioco. Il titolo della pagina è «BATTLECRAFT».
 - **Le versioni dalla v70 alla v92 sono state fatte in altre chat e non sono documentate
   qui.** Si sa solo quello che dice il LEGGIMI della v93 (sezione 9). Se serve sapere
   quando è entrato qualcosa, chiedere a Lorenzo o confrontare i file.
