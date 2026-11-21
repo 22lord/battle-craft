@@ -4,11 +4,15 @@ Documento di passaggio di consegne. Serve a riprendere in una chat nuova senza r
 da zero e senza rifare errori già pagati.
 
 Autore: Lorenzo Deda (@22lordd), Napoli.
-Stato al 21 novembre 2026: **battlecraft v102**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
+Stato al 21 novembre 2026: **battlecraft v103**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
 **fusi**: l'isola della vecchia "mappa" è il terreno della partita.
 
-Versione del contesto: v5 (prima nella repo). Le v94-v97 non sono mai arrivate in chat:
-le differenze v93→v98 sono in 9.1, v99→v102 in 9.2.
+Versione del contesto: v6. Le v94-v97 non sono mai arrivate in chat:
+le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3.
+
+**Novità grossa della v103: il gioco adesso si può VEDERE renderizzato** (sezione 3.1), dal
+PC di Lorenzo, con la sua GPU. Molte frasi "non verificato a occhio" qui sotto si possono
+finalmente verificare.
 
 ---
 
@@ -45,7 +49,7 @@ ancora quella, ma adesso vive dentro il gioco.
    richiesta poggia su una diagnosi sbagliata, dirlo. Richiesta sua, testuale: «ogni volta
    che ti do sti comandi cerca di sviluppare un senso critico».
 4. **Ogni file consegnato va rinominato con un numero di versione progressivo**, mai lo
-   stesso nome due volte. La prossima è la **v103**. Nella repo il file si chiama `index.html` e la
+   stesso nome due volte. La prossima è la **v104**. Nella repo il file si chiama `index.html` e la
    versione sta in `VERSIONE`: le consegne fuori dalla repo restano `battlecraft-vNN.html`.
 5. Gli archivi del modello che ha fornito **non contengono licenza**: da verificare sul
    sito di origine prima di qualsiasi pubblicazione.
@@ -136,6 +140,20 @@ Va bene per: posizioni, ossa, lunghezze, collisioni, logica, matrici, numeri.
 
 Il vecchio `test/three_stub.js` (renderer WebGL1 finto) è perso. Se servisse di nuovo una
 composizione approssimativa, va riscritto o sostituito da un rasterizzatore in numpy.
+
+### 3.1 Dal 21/11/2026, sul PC di Lorenzo: si vede
+
+Il limite qui sopra vale per il **cloud**. Claude Code ora gira anche sul PC di Lorenzo
+(Windows 11, GPU Intel UHD), e lì **Edge headless ha WebGL vero** (ANGLE/D3D11): scatti
+1280×720 della partita vera, con le luci, le ombre e la foschia del gioco. Strumenti e
+istruzioni in `tools/browser/README.md` (telecamera libera su punti del mondo, partita
+vera dal clic su Gioca). Il Chrome che si aspetta il plugin Playwright non c'è: si pilota
+Edge con `playwright-core`.
+
+Nella v103 è servito subito: ha trovato tre difetti che nessun test numerico vedeva (il
+cielo tagliato dietro il bus, la dissolvenza sul fotogramma sbagliato, il comignolo
+sospeso) e uno strumento sbagliato (il pontile mezzo all'asciutto, sezione 9.3).
+Resta vero: niente audio, niente telefono, FPS headless non significativi.
 
 ### Il sostituto: il modello analitico delle luci
 
@@ -240,6 +258,10 @@ test/suoni-lancio.cjs       lancio intero con audio finto che registra volumi
 test/mira-assistita.cjs     mira per telefono/controller/mouse, muri, portata
 test/caricamento.cjs        schermata di caricamento
 test/partita-simulata.cjs   rapporto (senza controlli): quando muoiono i bot
+test/pavimenti.cjs          v103: piastrelle che reggono, si rompono, tornano; niente buchi
+test/villaggio.cjs [SEME]   v103: case all'asciutto, pontili calpestabili, faro, bottino
+test/scivolamento.cjs check v103: piede in appoggio fermo, accovacciati, velocita' vere
+tools/browser/              v103: render veri con Edge (non sono test: vedi README)
 ```
 
 Tempi: ~10 minuti in tutto sul banco di prova del cloud.
@@ -383,6 +405,22 @@ entro 5 mm dall'ancoraggio.
     sostituzioni con regex larghe sul file intero.
 12. **Le righe dei payload non si leggono**: un `cat`, un `sed -n` o un Read senza taglio
     su quelle righe riempie il contesto. Sempre `cut -c1-200`.
+13. **Il nord dipende da chi parla.** Minimappa e bussola: alto = +z = nord, sinistra =
+    +x. I commenti vecchi del codice (e la sezione 10.6 di questo documento) usano il
+    contrario: "colline nord" = −z, "costa ovest" = −x. Il "nord-ovest vuoto" era il
+    quadrante (−x, −z), in basso a destra sulla minimappa. Parlando con Lorenzo vale la
+    minimappa.
+14. **Oggetti fissi nel mondo che dovrebbero seguire la telecamera**: la cupola del cielo
+    (raggio 430) stava al centro dell'isola e la telecamera taglia a 600. Dal bus il lato
+    opposto era oltre il taglio. Ora segue la telecamera (nel ciclo, prima del render).
+15. **Pannelli distruttibili: tutto quello che sta appoggiato a un pannello va DENTRO il
+    pannello** (`this.panel = rec` intorno al `box()`), se no resta sospeso quando il
+    pannello sparisce. Era successo al soffitto e al comignolo sotto il tetto.
+16. **Collisioni affiancate**: due box che si toccano sullo stesso bordo, calcolati come
+    centro ± metà, lasciano per arrotondamento una fessura di 1e-15 in cui un
+    `supportHeight` cade. Le piastrelle dei pavimenti sono allargate di 5 mm.
+17. **Python non c'è sul PC di Lorenzo** (solo l'alias del Microsoft Store). Node sì
+    (v26). Script in Node o modifiche con Edit.
 
 ---
 
@@ -427,8 +465,9 @@ Note:
   supercampionamento, pesante. Su telefono o portatile debole può crollare
 - fuori da "Automatica" salta anche il supercampionamento della lobby (`rapportoPixel`
   esce subito)
-- il `localStorage.setItem` nel cambio non ha il `try`: dove lo storage è bloccato lancia
-  un errore (la lettura invece è protetta)
+- ~~il `localStorage.setItem` nel cambio non ha il `try`~~ — corretto nella v103, insieme
+  ad altre due scritture e a una lettura all'avvio che bloccava il gioco con lo storage
+  chiuso
 
 **Accovacciamento ritoccato** (`crouchPose93`, `applyMovement`):
 - velocità da accovacciato da ×0,45 a **×0,28** (camminata ~0,73 m/s, corsa ~1,29 m/s)
@@ -444,8 +483,8 @@ Possibile scivolamento, **calcolato dal codice, non misurato**: un ciclo complet
 il piede dovrebbe restare fermo. Il piede atterra a +0,20 m e dovrebbe finire a −0,28, ma
 il vincolo lo ferma a −0,22: negli ultimi ~6 cm di ogni appoggio il piede viene trascinato.
 In più il vincolo è applicato DOPO il limite di velocità del piede (5 m/s), quindi in
-teoria può spostarlo di colpo. Da verificare con una misura vera (posizione nel mondo del
-piede in appoggio, fotogramma per fotogramma) o col video di Lorenzo.
+teoria può spostarlo di colpo. **Misurato nella v103 (sezione 9.3): 6-8 cm trascinati a
+ogni appoggio, corretto a 0.**
 
 **Prova grafica nascosta**: `VisualLab93` ora si crea solo se l'indirizzo contiene
 `?visualtest`. Per usarla: aggiungere `?visualtest` in fondo all'indirizzo nel browser
@@ -492,7 +531,51 @@ pizzico e doppio tocco su gioco e comandi, campo nome a 16 px. Non provato su iP
   partita creata e shader compilati dietro la schermata, bus fermo finche' non si vede
 
 Interpretazione da confermare con Lorenzo: "pavimenti bloccati" letto come terreno dentro
-le case. Se intendeva che non si possono rompere, e' un'altra modifica.
+le case. **Confermato il 21/11: intendeva che non si possono rompere** → fatto nella v103.
+
+### 9.3 Cosa cambia nella v103 (tutto con test, e visto nei render)
+
+- **Pavimenti distruttibili** (`floorTiles103`): piano terra e solai divisi in piastrelle
+  di circa una cella (4 m), ognuna un pannello di legno da 150 come le campate dei muri;
+  il solaio lascia il buco della scala. Lo zoccolo di pietra sotto i muri resta fisso.
+  Il piano terra prima era pietra + assi complanari a +0,30 (z-fighting): ora un blocco
+  solo. Gli oggetti a terra ricadono quando si rompe la piastrella sotto
+  (`settle103` → `Items.update`). 155 piastrelle sulla mappa standard.
+- **Tetto rotto = soffitto e comignolo spariscono con lui** (prima restavano sospesi).
+- **Villaggio dei pescatori** (`faiVillaggio103`, strada `VIA103` aggiunta ai `PATHS`):
+  sulla lingua di terra bassa fra la laguna e il mare, in basso a destra sulla minimappa.
+  6 case colorate ai lati della via (una a due piani), 3 pontili **calpestabili** (2 sulla
+  laguna, 1 sul mare; partono dalla riva vera e finiscono in ≥0,8 m d'acqua), barche
+  ormeggiate, reti stese, botti, casse, lampioni, e il **faro** a fasce bianche e rosse
+  sulla costa del mare (collisione, bottino alla base). Generatore casuale proprio (`r103`)
+  per non rimescolare il resto. Bottino in punta ai pontili.
+  Visto nei render: si legge bene; la rete stesa è il pezzo più debole (sembra un graticcio).
+- **Cielo tagliato dietro il bus**: trapezio scuro enorme dietro il bus all'inizio del
+  lancio. Era lo sfondo della pagina, visibile dove la cupola del cielo (ferma al centro,
+  raggio 430) superava il taglio della telecamera (600). Ora la cupola segue la telecamera.
+- **Espulsione dal bus prima di lasciare l'isola** (`eject103`): chi non saltava veniva
+  buttato a fine rotta, a 180 m dal centro, sopra il mare. Ora quando il bus, uscendo,
+  passa a 110 m. Provato: atterraggio a 113 m, sulla terra.
+- **Dissolvenza del caricamento**: partiva prima del primo aggiornamento della telecamera,
+  e per 350 ms si intravedeva la telecamera sotto una casa. Ora aspetta due fotogrammi.
+- **Accovacciato, piedi che scivolano**: misurati 6-8 cm trascinati a ogni appoggio
+  (flag d'appoggio del codice), 13-15 cm con la soglia dei 2 cm. Causa: ciclo da 0,8 m con
+  appoggio al 60% = 0,48 m di corpo col piede fermo, ma il vincolo caviglia-anca ne
+  concede 0,44. Ciclo portato a 0,66 m: 0,0 cm col flag, 0,7-2,2 cm con la soglia (in
+  piedi: 1,4). Il piede si stacca un po' più in fretta (arco `sin^0,7`). Da guardare
+  giocando: i passi da accovacciati sono più fitti.
+- `localStorage` protetto ovunque (`lsGet103`).
+- Test nuovi: `pavimenti.cjs`, `villaggio.cjs` (due semi), `scivolamento.cjs check`.
+
+Strumenti che hanno mentito in questa sessione (aggiunti alla lista della sezione 4):
+- `accovacciamento.cjs` muove il personaggio accovacciato a 1,8 m/s, una velocità che
+  accovacciati non esiste (0,73 e 1,29): non poteva vedere lo scivolamento
+- campionare un pontile a passo fisso: trova "buchi" nelle fughe di 8 cm fra le assi, che
+  sono volute e che la capsula scavalca
+- la "velocità massima del piede in appoggio" dà più del 100% anche in piedi, perché conta
+  i fotogrammi di contatto e stacco: tolta
+- il villaggio controllato solo coi numeri: i pontili risultavano "in acqua", il render
+  ha mostrato che il primo stava mezzo sulla spiaggia
 
 ### Cosa non è verificato (detto dal LEGGIMI stesso, e vero)
 
@@ -532,9 +615,15 @@ v70 e la v92**: verificare nel codice prima di ripartire.
 
 ### Il prossimo passo logico
 
-**Il primo dato vero ce l'ha Lorenzo**: aprire la v98 con `?visualtest`, fare PROVA GRAFICA, salvare immagini
-PRIMA/DOPO dalle tre viste, salvare le misure, e registrare un video dell'accovacciamento
-in partita. Senza quelli si lavora alla cieca su luci e movimento.
+Con la sezione 3.1 molto si guarda da soli. Restano a Lorenzo: **l'audio** (suoni del
+lancio v99, spari direzionali), **il telefono** (iPhone v101, mira assistita v100) e il
+giudizio sulla **naturalezza del movimento** (accovacciato v103 compreso). Da chiedergli:
+dove sono finite le texture dell'auto (`F:\` non esiste sul PC attuale) e da che sito
+viene il modello (licenza).
+
+Candidati per la prossima sessione, guardando i render: il DOPO della prova grafica nella
+partita normale (adesso si può confrontare a occhio), la rete stesa del villaggio, il
+brief del movimento (salto/atterraggio, corsa all'indietro, mani sull'arma).
 
 ---
 
@@ -637,6 +726,11 @@ non c'erano: non è noto come convivano con città e casupole. Da guardare.
 
 ### 10.6 Punto aperto sull'isola
 
+**Risolto nella v103: villaggio dei pescatori** (sezione 9.3). Attenzione: "nord" e
+"ovest" qui sono nella convenzione vecchia (trappola 13): sulla minimappa è il basso a
+destra. Il quadrante in alto a sinistra non era vuoto (Laguna, Casupole, Accampamento,
+12 case). Testo originale:
+
 **Il nord e l'ovest erano vuoti** dopo i tagli. Per un battle royale serve un motivo per
 andare in quella metà. A Lorenzo è stato chiesto se vuole altro (villaggio di pescatori
 sulla costa, rovine, miniera) o tenerla spoglia. **Non ha mai risposto.** Nella v93 le
@@ -666,4 +760,7 @@ tavolato, barca ad assi, isolotto alzato.
 
 **v99-v102**: sezione 9.2.
 
-**Prossima consegna: v103.**
+**v103**: pavimenti distruttibili, villaggio dei pescatori, cielo dietro il bus,
+espulsione sull'isola, scivolamento da accovacciati, primi render veri (sezione 9.3).
+
+**Prossima consegna: v104.**

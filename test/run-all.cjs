@@ -17,6 +17,10 @@ const test = [
   ['suoni-lancio.cjs', []],
   ['mira-assistita.cjs', []],
   ['caricamento.cjs', []],
+  ['pavimenti.cjs', []],
+  ['villaggio.cjs', []],
+  ['villaggio.cjs', ['123456']],
+  ['scivolamento.cjs', ['check']],
 ];
 
 let falliti = 0;

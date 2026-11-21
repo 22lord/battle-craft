@@ -412,7 +412,7 @@ window.loadingSlow91=setTimeout(function(){if(document.getElementById('loading91
 <div id="title">
   <div class="topbar">
     <div class="logo x">BATTLECRAFT<small>ULTIMO IN PIEDI</small></div>
-  <div id="ver">v102</div>
+  <div id="ver">v103</div>
     <div class="tabs" id="tabs"><button data-tab="play" class="on">Gioca</button><button data-tab="locker">Armadietto</button><button data-tab="controls">Comandi</button><button data-tab="settings">Impostazioni</button></div>
     <div class="profile"><div class="av" id="profAv">22</div><div><span id="profName" title="Clicca per cambiare nome">@22lordd</span><small id="profLv">LIVELLO 1</small></div></div>
   </div>
@@ -579,6 +579,8 @@ function keysLoad() {
     keysReindex();
   } catch (e) { /* storage non disponibile: restano i predefiniti */ }
 }
+// v103: lettura protetta (con lo storage bloccato getItem lancia e il gioco non partiva)
+function lsGet103(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function keysSave() { try { localStorage.setItem('bs_keys', JSON.stringify(KEYS)); } catch (e) { } }
 // Assegna un codice a un'azione togliendolo a chi lo aveva prima (niente doppioni).
 function keysSet(action, code) {
@@ -3242,6 +3244,11 @@ const PATHS = [
   [[6, 18], [-52, -4], [-96, 8], [-128, 14]],             // citta' -> costa ovest
   [[48, -6], [62, -46]],                                  // diramazione lago alto
 ];
+/* v103: la strada del villaggio dei pescatori, sulla lingua di terra fra la laguna
+   e il mare aperto (in basso a destra sulla minimappa). Il primo tratto la collega
+   al sentiero delle colline; il resto e' la via principale, con le case ai lati. */
+const VIA103 = [[-90, -88], [-86, -100], [-81, -112], [-76, -124], [-71, -136]];
+PATHS.push([[-16, -62], [-40, -68], [-62, -78], VIA103[0]], VIA103);
 
 function distToSeg(px, pz, ax, az, bx, bz) {
   const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz;
@@ -3712,6 +3719,11 @@ function makeMaterials() {
   M.sidingBlue = new THREE.MeshLambertMaterial({ map: TEX.siding('#6f9fd4') });
   M.sidingGrey = new THREE.MeshLambertMaterial({ map: TEX.siding('#b8b4a8') });
   M.sidingCream = new THREE.MeshLambertMaterial({ map: TEX.siding('#e2d6b4') });
+  // v103: villaggio dei pescatori, colori pieni da paese di mare
+  M.sidingTeal103 = new THREE.MeshLambertMaterial({ map: TEX.siding('#4fb0a6') });
+  M.sidingCoral103 = new THREE.MeshLambertMaterial({ map: TEX.siding('#e0705c') });
+  M.sidingYellow103 = new THREE.MeshLambertMaterial({ map: TEX.siding('#efc45a') });
+  M.net103 = new THREE.MeshLambertMaterial({ color: 0x2f4f49 });
   M.brick = new THREE.MeshLambertMaterial({ map: TEX.brick });
   M.shingle = new THREE.MeshLambertMaterial({ map: TEX.shingle });
   M.shingleRed = new THREE.MeshLambertMaterial({ color: 0xa8402f });
@@ -3859,7 +3871,7 @@ class World {
   build() {
     this.makeTerrain(); this.makeSky();
     this.faiAcque();
-    this.faiCitta(); this.faiCasupole();
+    this.faiCitta(); this.faiCasupole(); this.faiVillaggio103();
     this.rifaiTerreno102();
     this.faiCovi(); this.faiRive(); this.faiUova();
     for(const [type,args]of this.props92){if(type==='lamp'){if(!this.nearHouse92(args[0],args[1],.7)){this._lamp92(...args);this.placed92.push([type,...args]);}}
@@ -3952,6 +3964,28 @@ class World {
     this.sunSprite93=null;
   }
   /* --- edifici --- */
+  /* v103: pavimento a piastrelle grandi circa una cella (CELL), ognuna un pannello di
+     legno che si rompe col piccone come le campate dei muri. hole = rettangolo da
+     lasciare vuoto (la scala); una piastrella che lo tocca diventa fino a 4 blocchi. */
+  floorTiles103(x0, x1, z0, z1, yc, h, hole) {
+    const nx = Math.max(1, Math.round((x1 - x0) / CELL)), nz = Math.max(1, Math.round((z1 - z0) / CELL)), tw = (x1 - x0) / nx, td = (z1 - z0) / nz;
+    const tiles = (this.floorTiles103n || (this.floorTiles103n = []));
+    for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+      const r = { x0: x0 + tw * i, x1: x0 + tw * (i + 1), z0: z0 + td * j, z1: z0 + td * (j + 1) };
+      let parts = [r];
+      if (hole && hole.x0 < r.x1 && hole.x1 > r.x0 && hole.z0 < r.z1 && hole.z1 > r.z0) {
+        const cx0 = Math.max(r.x0, hole.x0), cx1 = Math.min(r.x1, hole.x1);
+        parts = [{ x0: r.x0, x1: cx0, z0: r.z0, z1: r.z1 }, { x0: cx1, x1: r.x1, z0: r.z0, z1: r.z1 },
+          { x0: cx0, x1: cx1, z0: r.z0, z1: Math.max(r.z0, hole.z0) }, { x0: cx0, x1: cx1, z0: Math.min(r.z1, hole.z1), z1: r.z1 }];
+      }
+      parts = parts.filter((p) => p.x1 - p.x0 > 0.05 && p.z1 - p.z0 > 0.05); if (!parts.length) continue;
+      const rec = this.beginPanel('wood', 150, (r.x0 + r.x1) / 2, yc, (r.z0 + r.z1) / 2); rec.floor103 = true;
+      // collisione allargata di 5 mm: fra due piastrelle l'arrotondamento lasciava una fessura
+      // di 1e-15 proprio al centro della casa, dove nasce il bottino (che ci cadeva dentro)
+      for (const p of parts) { const col = this.box(M.plank, (p.x0 + p.x1) / 2, yc, (p.z0 + p.z1) / 2, p.x1 - p.x0, h, p.z1 - p.z0); col.min.x -= 0.005; col.min.z -= 0.005; col.max.x += 0.005; col.max.z += 0.005; }
+      this.endPanel(); tiles.push(rec);
+    }
+  }
   nearHouse92(x,z,r=0){return this.houses92.some(h=>Math.abs(x-h.x)<h.w/2+.8+r&&Math.abs(z-h.z)<h.d/2+.8+r);}
   house(o) {
     this.houses92.push({x:o.x,z:o.z,w:o.w,d:o.d,door:o.door});
@@ -3969,8 +4003,13 @@ class World {
     // i muri in mattoni rendono pietra, il resto legno
     const panelKind = (wallM === M.brick || wallM === M.stone) ? 'stone' : 'wood';
     this.blockers.push({ x, z, r: Math.max(w, d) / 2 + 3 });
-    this.box(M.stone, x, y0 + 0.12, z, w + 0.5, 0.36, d + 0.5);
-    this.box(M.plank, x, y0 + 0.3 - 0.1, z, w, 0.2, d, { collide: false });
+    // v103: zoccolo di pietra solo sotto i muri (fisso, se no i muri restano appesi) e
+    // pavimento a piastrelle che si rompono. Prima pietra e assi avevano la faccia di
+    // sopra alla stessa quota (+0,30): complanari, z-fighting. Ora c'e' un solo blocco.
+    { const iw = w / 2 - T / 2, id = d / 2 - T / 2, rb = 0.25 + T / 2, rc = 0.25 - rb / 2;
+      this.box(M.stone, x, y0 + 0.12, z - d / 2 - rc, w + 0.5, 0.36, rb); this.box(M.stone, x, y0 + 0.12, z + d / 2 + rc, w + 0.5, 0.36, rb);
+      this.box(M.stone, x - w / 2 - rc, y0 + 0.12, z, rb, 0.36, 2 * id); this.box(M.stone, x + w / 2 + rc, y0 + 0.12, z, rb, 0.36, 2 * id);
+      this.floorTiles103(x - iw, x + iw, z - id, z + id, y0 + 0.12, 0.36, null); }
     const base0 = y0 + 0.3;
     for (let f = 0; f < floors; f++) {
       const base = base0 + f * fh, cy = base + fh / 2;
@@ -4016,9 +4055,8 @@ class World {
       // solaio + scala interna
       if (f < floors - 1) {
         const top = base + fh; const sw = 1.6, sl = 4.4; const sx0 = x - w / 2 + T / 2, sx1 = sx0 + sw; const sz0 = z - d / 2 + 0.6, sz1 = sz0 + sl;
-        this.box(M.plank, (sx1 + x + w / 2) / 2, top - 0.12, z, (x + w / 2 - sx1), 0.24, d);
-        const restZ0 = sz1, restZ1 = z + d / 2; if (restZ1 - restZ0 > 0.2) this.box(M.plank, (sx0 + sx1) / 2, top - 0.12, (restZ0 + restZ1) / 2, sw, 0.24, restZ1 - restZ0);
-        if (sz0 - (z - d / 2) > 0.2) this.box(M.plank, (sx0 + sx1) / 2, top - 0.12, (z - d / 2 + sz0) / 2, sw, 0.24, sz0 - (z - d / 2));
+        // v103: solaio a piastrelle distruttibili, col buco della scala
+        this.floorTiles103(sx0, x + w / 2 - T / 2, z - d / 2 + T / 2, z + d / 2 - T / 2, top - 0.12, 0.24, { x0: sx0, x1: sx1, z0: sz0, z1: sz1 });
         // gradini visivi + superficie inclinata percorribile
         const steps = 9; for (let k = 0; k < steps; k++) { const t = (k + 0.5) / steps; this.box(M.darkWood, (sx0 + sx1) / 2, base + t * fh - 0.1, sz0 + t * sl, sw, 0.2, sl / steps, { collide: false }); }
         const hb = base; this.surface(sx0, sz0, sx1, sz1, base - 0.3, top + 0.1, (px, pz) => { if (px < sx0 || px > sx1 || pz < sz0 || pz > sz1) return null; return hb + ((pz - sz0) / sl) * fh; }, 0.35);
@@ -4034,15 +4072,17 @@ class World {
       const pw = ax ? 4.0 : 2.7, pd = ax ? 2.7 : 4.0; const pg = hipRoofGeometry(pw, pd, 0.34); pg.translate(px, y0 + 0.31 + 2.62, pz); this.batch(pg, roofM); this.rbox(trimM, px, y0 + 0.31 + 2.58, pz, pw + 0.12, 0.16, pd + 0.12);
     }
     const top = base0 + floors * fh;
-    this.box(M.plank, x, top - 0.1, z, w - 0.1, 0.2, d - 0.1, { collide: false });
     const roofRec = this.beginPanel(panelKind, 180, x, top + 1, z);
+    // v103: il soffitto sotto il tetto ora se ne va col tetto (prima restava sospeso)
+    this.box(M.plank, x, top - 0.1, z, w - 0.1, 0.2, d - 0.1, { collide: false });
     const ov = 0.55, slope = 0.55; const rg = hipRoofGeometry(w + ov * 2, d + ov * 2, slope); rg.translate(x, top, z);
     { const h = {}; this.batch(rg, roofM, h); roofRec.handles.push(h); }
     const roofSurf = this.surface(x - w / 2 - ov, z - d / 2 - ov, x + w / 2 + ov, z + d / 2 + ov, top - 0.3, top + Math.min(w, d) / 2 * slope + 0.6, hipHeightFn(x, z, w / 2 + ov, d / 2 + ov, slope, top), 0.35);
     this.box(trimM, x, top + 0.02, z, w + ov * 2 + 0.1, 0.22, d + ov * 2 + 0.1, { collide: false });
     // il tetto si rompe tutto insieme: la sua superficie calpestabile sparisce con lui
     roofRec.cols.push(roofSurf); roofSurf.harvest = roofRec; this.endPanel();
-    const chx = x + w / 4, chz = z - d / 6; this.box(M.brick, chx, top + Math.min(w, d) / 4 * slope + 0.8, chz, 0.8, 2.0, 0.8, { collide: false });
+    // v103: anche il comignolo cade col tetto (nel render restava sospeso sopra la casa scoperchiata)
+    const chx = x + w / 4, chz = z - d / 6; this.panel = roofRec; this.box(M.brick, chx, top + Math.min(w, d) / 4 * slope + 0.8, chz, 0.8, 2.0, 0.8, { collide: false }); this.panel = null;
     this.spots.push({ x, z });
   }
   gazebo(x, z) {
@@ -4204,6 +4244,7 @@ class World {
   removeHarvestable(rec) {
     if (rec.gone) return; rec.gone = true;
     if (rec.panel) {
+      if (rec.floor103) this.settle103 = true;   // gli oggetti appoggiati ricadono (Items.update)
       for (const c of rec.cols) this.physics.remove(c);
       for (const h of rec.handles) {
         if (!h.mesh) continue; const pa = h.mesh.geometry.attributes.position, a = pa.array;
@@ -4707,6 +4748,129 @@ Object.assign(World.prototype, {
       re.rotation.set(0, rot + 1.57, 1.45); re.position.set(x + s * 0.5, y + 0.55, z - s * 0.3);
       this.scene.add(re);
     }
+  },
+
+  /* ---------------------------------------------------------------
+     v103 — VILLAGGIO DEI PESCATORI
+     Sulla lingua di terra bassa (1-2 m) fra la laguna e il mare, che era vuota:
+     case colorate ai lati della via, due pontili sulla laguna e uno sul mare
+     (calpestabili, a differenza del molo del Lago Grande), barche di assi
+     ormeggiate, reti stese, botti, casse, e il faro sulla punta che guarda il mare.
+     Generatore casuale proprio (r103), cosi' il resto della mappa non cambia.
+     --------------------------------------------------------------- */
+  faiVillaggio103() {
+    let seed = 103; const r103 = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+    const rr = (a, b) => a + (b - a) * r103();
+    const terra = (x, z) => terrainHeight(x, z) > 0.45;   // la spiaggia e' bassa: la piazzola spiana comunque
+    // punto lungo la via a distanza t dall'inizio, con direzione e normale verso la laguna (+x)
+    const segs = []; let tot = 0;
+    for (let i = 0; i + 1 < VIA103.length; i++) { const [ax, az] = VIA103[i], [bx, bz] = VIA103[i + 1], l = Math.hypot(bx - ax, bz - az); segs.push({ ax, az, dx: (bx - ax) / l, dz: (bz - az) / l, t0: tot, l }); tot += l; }
+    const lungo = (t) => { const s = segs.find((g) => t <= g.t0 + g.l) || segs[segs.length - 1]; const u = t - s.t0; let nx = -s.dz, nz = s.dx; if (nx < 0) { nx = -nx; nz = -nz; } return { x: s.ax + s.dx * u, z: s.az + s.dz * u, dx: s.dx, dz: s.dz, nx, nz }; };
+    this.villaggio103 = { case: [], pontili: [], faro: null };
+    const muri = [M.sidingTeal103, M.sidingCoral103, M.sidingYellow103, M.sidingBlue, M.sidingCream, M.sidingTeal103];
+    const tetti = [M.shingleRed, M.metalRoof, M.shingle, M.shingleRed, M.woodRoof, M.metalRoof];
+    // 1. case ai due lati della via, la porta guarda la strada
+    const posti = [[5, 1], [11, -1], [21, 1], [28, -1], [38, 1], [45, -1]];
+    posti.forEach(([t, s], i) => {
+      const w = rr(6.2, 7.6), d = rr(5.6, 6.8), p = lungo(t);
+      const mezzo = (w / 2) * Math.abs(p.nx) + (d / 2) * Math.abs(p.nz);
+      for (const off of [3.2 + mezzo + 0.8, 3.2 + mezzo + 2.5]) {
+        const x = p.x + p.nx * s * off, z = p.z + p.nz * s * off; let ok = true;
+        for (let a = -1; a <= 1; a += 0.5) for (let b = -1; b <= 1; b += 0.5) if (!terra(x + a * (w / 2 + 1.3), z + b * (d / 2 + 1.3))) ok = false;
+        for (const bl of this.blockers) if (Math.hypot(x - bl.x, z - bl.z) < bl.r + Math.max(w, d) / 2) ok = false;
+        if (!ok) continue;
+        this.house({ x, z, w, d, floors: i === 2 ? 2 : 1, door: s > 0 ? 2 : 3, wall: muri[i], roof: tetti[i] });
+        this.villaggio103.case.push({ x, z });
+        // il contorno, dal lato opposto alla strada
+        const bx = x + p.nx * s * (mezzo + 2.2), bz = z + p.nz * s * (mezzo + 2.2);
+        if (i % 3 === 0) { this.botte103(bx + p.dx * 2, bz + p.dz * 2); this.botte103(bx + p.dx * 2.9, bz + p.dz * 2.6); this.casse(bx - p.dx * 2, bz - p.dz * 2, 2); }
+        else if (i % 3 === 1) this.rete103(bx, bz, Math.atan2(p.dx, p.dz));
+        else { this.casse(bx, bz, 3); this.botte103(bx + p.dx * 2.4, bz + p.dz * 2.4); }
+        break;
+      }
+    });
+    // 2. pontili: due sulla laguna (+x), uno sul mare (-x)
+    for (const [t, s] of [[16, 1], [34, 1], [24, -1]]) { const p = lungo(t); this.pontile103(p.x, p.z, s); }
+    // 3. il faro: sulla costa del mare, all'inizio della via
+    { const p = lungo(0); let x = p.x; while (x > p.x - 70 && terrainHeight(x, p.z) > 0.6) x -= 0.5;
+      x += 6; if (terra(x, p.z) && terra(x + 2.5, p.z) && terra(x - 2.5, p.z)) this.faro103(x, p.z); }
+    // 4. lampioni lungo la via, dal lato della laguna
+    for (let t = 8; t < tot; t += 13) { const p = lungo(t); this.lamp(p.x + p.nx * 3.6, p.z + p.nz * 3.6); }
+    LUOGHI.push({ n: 'Villaggio dei pescatori', x: lungo(tot / 2).x, z: lungo(tot / 2).z });
+  },
+
+  /* Pontile calpestabile: parte dal punto in cui la terra scende sotto il piano delle
+     tavole (stessa regola del molo) e va dritto verso l'acqua, lungo l'asse x.
+     Tavole dritte con la fuga, pali fino al fondo, bitte in punta, barca ormeggiata. */
+  pontile103(x0, z, s) {
+    const yTav = MARE + 0.55; let x = x0; let n = 0;
+    /* La riva e' dove la terra entra in acqua, non dove scende sotto le tavole: su
+       queste spiagge piatte fra le due cose c'erano 4-5 m di sabbia e il primo
+       pontile restava mezzo all'asciutto (visto nel render). */
+    while (Math.abs(x - x0) < 60 && terrainHeight(x, z) > MARE + 0.1) x += s * 0.3;
+    if (Math.abs(x - x0) >= 60) return;
+    const xr = x - s * 2.0;                                    // le prime tavole appoggiano sulla spiaggia
+    // si allunga finche' sotto la punta l'acqua e' profonda almeno 80 cm (massimo 18 file)
+    let rows = 0; for (let i = 0; i < 18; i++) { const cx = xr + s * (0.65 + i * 1.3); if (terrainHeight(cx, z) > yTav - 0.1 && i > 2) break; rows = i + 1; if (i >= 9 && terrainHeight(cx, z) < MARE - 0.8) break; }
+    if (rows < 6) return;
+    for (let i = 0; i < rows; i++) {
+      const cx = xr + s * (0.65 + i * 1.3);
+      for (let k = -1; k <= 1; k++) this.box(k === 0 ? M.plank : M.darkWood, cx, yTav, z + k * 0.87, 1.22, 0.18, 0.8);
+      if (i % 2 === 0) for (const sd of [-1, 1]) this.box(M.darkWood, cx, yTav - 0.17, z + sd * 1.05, 1.3, 0.16, 0.22, { collide: false });
+      if (i % 3 === 1 || i === rows - 1) for (const sd of [-1, 1]) { const fondo = Math.min(terrainHeight(cx, z + sd * 1.1), MARE - 0.3); this.box(M.darkWood, cx, (yTav + fondo) / 2, z + sd * 1.1, 0.2, yTav - fondo, 0.2, { collide: false }); }
+    }
+    const xe = xr + s * (0.65 + (rows - 1) * 1.3);
+    for (const sd of [-1, 1]) this.box(M.darkWood, xe, yTav + 0.45, z + sd * 1.0, 0.22, 0.9, 0.22, { collide: false });
+    this.barca(xe - s * 1.5, z + 2.6, 0.12 * s, MARE);
+    this.casse(xr + s * 2.0, z - 0.6, 1);
+    this.blockers.push({ x: (xr + xe) / 2, z, r: Math.abs(xe - xr) / 2 + 2 });
+    this.itemSpawns.push([s > 0 ? 'ammoShell' : 'sg', xe, z, yTav + 0.1 - terrainHeight(xe, z)]);
+    this.villaggio103.pontili.push({ x0: xr, x1: xe, z, y: yTav + 0.09, rows });
+  },
+
+  /* Botte: due tronchi di cono che si allargano al centro (la pancia), cerchi scuri. */
+  botte103(x, z) {
+    const y = this.hMin102(x, z, 0.45);
+    const lo = new THREE.CylinderGeometry(0.42, 0.35, 0.5, 12); lo.translate(x, y + 0.25, z); this.batch(lo, M.plank);
+    const hi = new THREE.CylinderGeometry(0.35, 0.42, 0.5, 12); hi.translate(x, y + 0.75, z); this.batch(hi, M.plank);
+    for (const hy of [0.18, 0.82]) { const c = new THREE.CylinderGeometry(0.405, 0.405, 0.06, 12); c.translate(x, y + hy, z); this.batch(c, M.ironDark); }
+    this.physics.add({ type: 'box', min: new THREE.Vector3(x - 0.42, y, z - 0.42), max: new THREE.Vector3(x + 0.42, y + 1.0, z + 0.42), tag: 'static' });   // solo collisione
+  },
+
+  /* Rete stesa ad asciugare: due pali, una traversa, la maglia fatta di cordini. */
+  rete103(x, z, rot) {
+    const y = this.hMin102(x, z, 1.4), cs = Math.cos(rot), sn = Math.sin(rot), L = 2.6;
+    for (const sd of [-1, 1]) this.box(M.darkWood, x + sn * sd * L / 2, y + 1.05, z + cs * sd * L / 2, 0.14, 2.1, 0.14);
+    this.box(M.darkWood, x, y + 2.05, z, 0.1, 0.1, L + 0.2, { rotY: rot, collide: false });
+    for (let k = 0; k <= 8; k++) { const u = -L / 2 + 0.15 + k * (L - 0.3) / 8; this.box(M.net103, x + sn * u, y + 1.35, z + cs * u, 0.03, 1.4, 0.03, { collide: false }); }
+    for (let j = 0; j < 6; j++) { const sag = 0.06 * Math.sin(j); this.box(M.net103, x, y + 0.75 + j * 0.24 - sag, z, 0.03, 0.03, L - 0.3, { rotY: rot, collide: false }); }
+    // galleggianti rossi e bianchi lungo il bordo di sotto
+    for (let k = 0; k < 5; k++) { const u = -L / 2 + 0.35 + k * (L - 0.7) / 4; this.box(k % 2 ? M.white : M.red, x + sn * u, y + 0.7, z + cs * u, 0.16, 0.12, 0.16, { collide: false }); }
+  },
+
+  /* Il faro: torre a fasce bianche e rosse che si stringe salendo, ballatoio con la
+     ringhiera, lanterna di vetro con la luce dentro, cappello rosso. E' il punto di
+     riferimento che si vede dal bus e da mezza isola. */
+  faro103(x, z) {
+    const y = this.hMin102(x, z, 2.6), H = 12, R0 = 2.3, R1 = 1.55, nb = 5;
+    this.box(MX.sasso, x, y + 0.3, z, 5.6, 0.9, 5.6);                                    // basamento
+    for (let i = 0; i < nb; i++) {
+      const a = i / nb, b = (i + 1) / nb, g = new THREE.CylinderGeometry(R0 + (R1 - R0) * b, R0 + (R1 - R0) * a, H / nb, 20);
+      g.translate(x, y + 0.75 + H * (a + b) / 2, z); this.batch(g, i % 2 ? M.red : M.white);
+    }
+    const yt = y + 0.75 + H;
+    { const g = new THREE.CylinderGeometry(2.3, 2.3, 0.22, 24); g.translate(x, yt + 0.11, z); this.batch(g, M.ironDark); }   // ballatoio
+    for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2; this.box(M.ironDark, x + Math.cos(a) * 2.15, yt + 0.6, z + Math.sin(a) * 2.15, 0.06, 0.8, 0.06, { collide: false }); }
+    for (let k = 0; k < 16; k++) { const a = (k + 0.5) / 16 * Math.PI * 2; this.box(M.ironDark, x + Math.cos(a) * 2.15, yt + 1.0, z + Math.sin(a) * 2.15, 0.06, 0.06, 0.86, { rotY: -a, collide: false }); }
+    { const g = new THREE.CylinderGeometry(1.05, 1.05, 1.5, 12); g.translate(x, yt + 0.97, z); this.batch(g, M.glass); }    // lanterna
+    { const g = new THREE.CylinderGeometry(0.42, 0.42, 0.7, 10); g.translate(x, yt + 0.97, z); this.batch(g, M.lamp); }
+    { const g = new THREE.CylinderGeometry(1.25, 1.25, 0.16, 16); g.translate(x, yt + 1.8, z); this.batch(g, M.red); }
+    { const g = new THREE.CylinderGeometry(0.12, 1.3, 1.1, 16); g.translate(x, yt + 2.43, z); this.batch(g, M.red); }      // cappello
+    this.box(M.darkWood, x + R0 - 0.02, y + 1.85, z, 0.12, 2.1, 1.1, { collide: false });                  // porta, verso l'isola
+    { const rc = (R0 + R1) / 2; this.physics.add({ type: 'box', min: new THREE.Vector3(x - rc, y, z - rc), max: new THREE.Vector3(x + rc, yt + 3, z + rc), tag: 'static' }); }   // solo collisione
+    this.blockers.push({ x, z, r: 5 });
+    this.itemSpawns.push(['ar', x + 3.6, z, 0], ['shieldL', x + 3.6, z + 1.2, 0]);
+    this.villaggio103.faro = { x, z, y, h: yt + 3 - y };
   },
 
   /* ---------------------------------------------------------------
@@ -6186,7 +6350,9 @@ class Items {
     return true;
   }
   remove(it) { const i = this.list.indexOf(it); if (i >= 0) this.list.splice(i, 1); this.group.remove(it.g); }
-  update(dt) { for (const it of this.list) { it.t += dt; it.g.rotation.y = it.t * 1.2; it.g.position.y = it.y + Math.sin(it.t * 2.2) * 0.08; } }
+  update(dt) {
+    const W = this.G.world; if (W && W.settle103) { W.settle103 = false; for (const it of this.list) { const y = this.G.physics.supportHeight(it.x, it.z, it.y - 0.25) + 0.25; if (y < it.y - 0.01) it.y = y; } }
+    for (const it of this.list) { it.t += dt; it.g.rotation.y = it.t * 1.2; it.g.position.y = it.y + Math.sin(it.t * 2.2) * 0.08; } }
   reset() { for (const it of [...this.list]) this.remove(it); this.list.length = 0; }
 }
 
@@ -6700,7 +6866,10 @@ function crouchPose93(ch,dt){
   m.hips.updateWorldMatrix(true,true);wristHuman70(m.chest,chestQ,1);
  }
  g.position.y-=.42*k;g.updateMatrixWorld(true);
- st.phase=(st.phase+speed*dt/.8)%1;
+ /* v103: ciclo da 0,66 m invece di 0,8. Con 0,8 e appoggio al 60% il corpo avanzava 0,48 m
+    col piede fermo, ma il vincolo caviglia-anca ne concede 0,44 (+-0,22): misurati 6-8 cm
+    trascinati a ogni appoggio. Ora in appoggio il corpo fa 0,40 m: atterra a +0,20, stacca a -0,20. */
+ st.phase=(st.phase+speed*dt/.66)%1;
  const ankle=m.ankleH*(m.scale||1)||.095;
  for(let i=0;i<2;i++){
   const leg=legs[i], sign=i===0?1:-1;
@@ -6722,7 +6891,7 @@ function crouchPose93(ch,dt){
   const side=target.clone().sub(ch.pos).dot(lateral)*sign;
   if(side<.08||target.distanceTo(home)>.34){const shift=home.clone().sub(f.last);if(shift.length()>5*dt)shift.setLength(5*dt);target.copy(f.last).add(shift);f.anchor.copy(target);f.stance=false;}
   const ground=ch.G.physics.supportHeight(target.x,target.z,ch.pos.y+.7);
-  target.y=ground+ankle+(speed>.12&&u>=stance?Math.sin(Math.PI*(u-stance)/(1-stance))*.055:0);
+  target.y=ground+ankle+(speed>.12&&u>=stance?Math.pow(Math.sin(Math.PI*(u-stance)/(1-stance)),.7)*.055:0);
   const travel=target.clone().sub(f.last);if(travel.length()>5*dt)target.copy(f.last).add(travel.setLength(5*dt));
   // A crouched ankle stays under its own hip, never in a full running lunge.
   const offset=target.clone().sub(ch.pos);const along=clamp(offset.dot(forward),-.22,.22),across=clamp(offset.dot(lateral)*sign,.10,.20)*sign;
@@ -6750,6 +6919,7 @@ class Drop88{
     if(size.length()>0){const wrapper=new THREE.Group();this.bus.position.sub(center);wrapper.add(this.bus);wrapper.scale.setScalar(11/Math.max(size.x,size.z));this.bus=wrapper;}
     this.bus.traverse(o=>{if(o.isMesh)o.castShadow=false;});G.scene.add(this.bus);this.bus.position.copy(this.from);this.bus.rotation.y=angle-Math.PI/2;
     G.chars.forEach((c,i)=>{c.air88={phase:'bus',jumpAt:3.5+i/Math.max(1,G.chars.length-1)*18.5+Math.random()*.5,time:0,blend:0,glider:makeGlider88(),target:new THREE.Vector3(...[0,0,0])};const dest=G.world.botSpawns[i%G.world.botSpawns.length];c.air88.target.set(dest[0],0,dest[1]);if(!c.isPlayer){/* v102: salta quando il bus passa piu' vicino alla sua meta, se no non ci arriva e scende lungo la rotta in mezzo agli altri */const ab=this.to.clone().sub(this.from),k=clamp(((dest[0]-this.from.x)*ab.x+(dest[1]-this.from.z)*ab.z)/(ab.x*ab.x+ab.z*ab.z),0,1);c.air88.jumpAt=clamp(k*this.duration+rnd(-1,1),3.5,this.duration-.5);}G.scene.add(c.air88.glider);c.air88.glider.visible=false;c.pos.copy(this.from);c.vel.set(0,0,0);c.onGround=false;c.ads=false;c.model.group.visible=false;});
+    /* v103: chi non salta viene buttato giu' quando il bus, uscendo, passa a 110 m dal centro: prima succedeva a fine rotta, a 180 m, cioe' sopra il mare. */{const ab=this.to.clone().sub(this.from),A=ab.x*ab.x+ab.z*ab.z,B=2*(this.from.x*ab.x+this.from.z*ab.z),C=this.from.x*this.from.x+this.from.z*this.from.z-110*110,D=B*B-4*A*C;this.eject103=D>0?clamp((-B+Math.sqrt(D))/(2*A),0,1)*this.duration:this.duration;}
     G.cam.yaw=angle;G.cam.pitch=-.25;G.input.clearMouse();G.hud.toast('Scegli dove atterrare',true);
   }
   jump(c){const a=c.air88;if(!a||a.phase!=='bus')return;a.phase='fall';a.time=0;c.pos.copy(this.bus.position).add(new THREE.Vector3(0,-4,0));c.vel.set(Math.sin(this.G.cam.yaw)*6,-3,Math.cos(this.G.cam.yaw)*6);c.yaw=c.isPlayer?this.G.cam.yaw:Math.atan2(a.target.x-c.pos.x,a.target.z-c.pos.z);}
@@ -6758,7 +6928,7 @@ class Drop88{
   update(dt){
     const G=this.G;this.elapsed+=dt;if(this.bus){this.bus.position.lerpVectors(this.from,this.to,clamp(this.elapsed/this.duration,0,1));this.bus.position.y=108+Math.sin(this.elapsed*.8)*.3;this.bus.traverse(o=>{if(o.name.startsWith('Pale_rotore'))o.rotation.y+=dt*18;});if(this.elapsed>this.duration+3)this.bus.visible=false;}
     for(const c of G.chars){const a=c.air88;if(!a)continue;a.time+=dt;if(!c.alive){G.scene.remove(a.glider);c.air88=null;continue;}
-      if(a.phase==='bus'){c.pos.copy(this.bus.position);if(this.elapsed>=this.duration||(!c.isPlayer&&this.elapsed>=a.jumpAt))this.jump(c);continue;}
+      if(a.phase==='bus'){c.pos.copy(this.bus.position);if(this.elapsed>=this.eject103||(!c.isPlayer&&this.elapsed>=a.jumpAt))this.jump(c);continue;}
       let x=0,z=0;
       if(c.isPlayer){const inp=G.input,k=inp.keys,f=clamp((k[KEYS.fwd]?1:0)-(k[KEYS.back]?1:0)+(inp.moveY84||0)+(inp.padY88||0),-1,1),s=clamp((k[KEYS.right]?1:0)-(k[KEYS.left]?1:0)+(inp.moveX84||0)+(inp.padX88||0),-1,1);x=Math.sin(G.cam.yaw)*f-Math.cos(G.cam.yaw)*s;z=Math.cos(G.cam.yaw)*f+Math.sin(G.cam.yaw)*s;c.yaw=G.cam.yaw;a.turn=s;}
       else{const d=a.target.clone().sub(c.pos);d.y=0;if(d.length()>2)d.normalize();else d.set(0,0,0);x=d.x;z=d.z;c.yaw=Math.atan2(x,z);}
@@ -6773,7 +6943,7 @@ class Drop88{
       if(c.pos.y<=ground+.06){c.pos.y=ground;c.vel.y=0;c.onGround=true;c.wasGround=false;c._vyPrec=-4.7;G.scene.remove(a.glider);a.glider.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});c.landBlend88={time:0,root:c.model.group.quaternion.clone(),bones:(c.model.ossaClip||[]).filter(Boolean).map(b=>[b,b.quaternion.clone()])};c.air88=null;c.updateHeld();c.model.group.rotation.set(0,c.yaw,0);if(c.isPlayer)G.hud.toast('Atterraggio completato',true);}
     }
     const a=G.player?.air88,air=!!a;document.body.classList.toggle('airMode88',air);this.hud.style.display=air?'block':'none';
-    if(air){const key=G.pad88?.active?'A / ✕':G.touch84?.active?'Tocca':'Spazio';this.hud.textContent=a.phase==='bus'?(this.elapsed<3?'Partenza tra '+Math.ceil(3-this.elapsed):key+' · SALTA DAL BUS · '+Math.max(0,Math.ceil(this.duration-this.elapsed))+' s'):a.phase==='fall'?key+' · APRI DELTAPLANO':'DELTAPLANO APERTO · Dirigi la planata';}
+    if(air){const key=G.pad88?.active?'A / ✕':G.touch84?.active?'Tocca':'Spazio';this.hud.textContent=a.phase==='bus'?(this.elapsed<3?'Partenza tra '+Math.ceil(3-this.elapsed):key+' · SALTA DAL BUS · '+Math.max(0,Math.ceil(this.eject103-this.elapsed))+' s'):a.phase==='fall'?key+' · APRI DELTAPLANO':'DELTAPLANO APERTO · Dirigi la planata';}
     const chunks=G.world.chunks;if(chunks.airborne88!==air){chunks.airborne88=air;chunks.elapsed=1;}
     if(G.scene.fog){G.scene.fog.near=damp(G.scene.fog.near,air?170:chunks.distance*.52,2,dt);G.scene.fog.far=damp(G.scene.fog.far,air?430:chunks.distance-10,2,dt);}
   }
@@ -6910,7 +7080,7 @@ class DropAudio99{
 class Gamepad88{
   constructor(G){this.G=G;this.active=false;this.index=null;this.prev=[];this.repeat=0;this.sens=1;this.dead=.16;this.block=true;this.state='';
     try{this.sens=clamp(+(localStorage.getItem('bc_pad_sens')||1),.3,2);this.dead=clamp(+(localStorage.getItem('bc_pad_dead')||.16),.05,.35);}catch(e){}
-    const panel=document.getElementById('tab-settings');for(const [label,key,min,max,step]of [['Sensibilità controller','sens',.3,2,.05],['Zona morta controller','dead',.05,.35,.01]]){const row=document.createElement('label');row.className='row';row.textContent=label;const input=document.createElement('input');input.type='range';input.min=min;input.max=max;input.step=step;input.value=this[key];input.oninput=()=>{this[key]=+input.value;try{localStorage.setItem(key==='sens'?'bc_pad_sens':'bc_pad_dead',input.value);}catch(e){}};row.appendChild(input);panel.appendChild(row);}
+    const panel=document.getElementById('tab-settings');for(const [label,key,min,max,step]of [['Sensibilità controller','sens',.3,2,.05],['Zona morta controller','dead',.05,.35,.01]]){const row=document.createElement('label');row.className='row';row.textContent=label;const input=document.createElement('input');input.type='range';input.min=min;input.max=max;input.step=step;input.value=this[key];input.oninput=()=>{this[key]=+input.value;try{try{localStorage.setItem(key==='sens'?'bc_pad_sens':'bc_pad_dead',input.value);}catch(e){}}catch(e){}};row.appendChild(input);panel.appendChild(row);}
     const help=document.createElement('p');help.className='note';help.textContent='Controller: LS muovi · RS visuale · A/✕ salta o apri deltaplano · RT/R2 spara · LT/L2 mira · X/□ raccogli/ricarica · Y/△ piccone · LB/RB cambia arma · B/○ costruisci · L3 corsa · R3 accovacciati/alzati · D-pad ↑ modifica, ↓ materiale, ←/→ pezzo · Options pausa. Menu: D-pad, A conferma, B indietro.';document.getElementById('tab-controls').appendChild(help);
     window.addEventListener('gamepaddisconnected',e=>{if(e.gamepad.index===this.index){this.release();this.index=null;if(G.state==='playing')G.pause('Controller scollegato. Ricollegalo o usa mouse e tastiera.');}});
     window.addEventListener('blur',()=>{this.release();this.block=true;});document.addEventListener('visibilitychange',()=>{if(document.hidden){this.release();this.block=true;}});
@@ -7578,7 +7748,7 @@ class Game {
       this.audio.setMusicVol(this.musVol); this.audio.musicaMenu(true); };
     for (const ev of ['pointerdown', 'keydown']) window.addEventListener(ev, avvia, { once: false });
     const distanceSelect=$('renderDistanceSel');
-    if(distanceSelect){const value=Number(localStorage.getItem('baia_renderDistance')||75);this.world.chunks.setDistance(value);distanceSelect.value=String(this.world.chunks.distance);distanceSelect.addEventListener('change',()=>{this.world.chunks.setDistance(+distanceSelect.value);localStorage.setItem('baia_renderDistance',distanceSelect.value);});}
+    if(distanceSelect){const value=Number(lsGet103('baia_renderDistance')||75);this.world.chunks.setDistance(value);distanceSelect.value=String(this.world.chunks.distance);distanceSelect.addEventListener('change',()=>{this.world.chunks.setDistance(+distanceSelect.value);try{localStorage.setItem('baia_renderDistance',distanceSelect.value);}catch(e){}});}
     $('btnPlay').addEventListener('click', () => { this.audio.init(); this.audio.resume(); this.avvia102(); });
     for (const b of document.querySelectorAll('#tabs button')) b.addEventListener('click', () => { this.setTab(b.dataset.tab); this.audio.init(); this.audio.click(); });
     $('lockPrev').addEventListener('click', () => { this.outfit = 0; this.setLobbyPlayer(); this.refreshLobbyUI(); this.saveStats(); });
@@ -7625,7 +7795,7 @@ class Game {
     $('btnQuit').addEventListener('click', () => this.quitToMenu());
     $('btnRestart').addEventListener('click', () => { this.audio.resume(); this.avvia102(); });
     $('btnMenu').addEventListener('click', () => this.quitToMenu());
-    for(const id of ['resolution94','resolutionPause94']){const el=$(id);el.value=this.resolution94;el.addEventListener('change',()=>{this.resolution94=el.value;localStorage.setItem('battlecraft_resolution94',el.value);$('resolution94').value=$('resolutionPause94').value=el.value;this.rapportoPixel(this.state==='title');this.onResize();});}
+    for(const id of ['resolution94','resolutionPause94']){const el=$(id);el.value=this.resolution94;el.addEventListener('change',()=>{this.resolution94=el.value;try{localStorage.setItem('battlecraft_resolution94',el.value);}catch(e){}$('resolution94').value=$('resolutionPause94').value=el.value;this.rapportoPixel(this.state==='title');this.onResize();});}
     this.ui.q1.addEventListener('change', (e) => this.setQuality(e.target.value)); this.ui.q2.addEventListener('change', (e) => this.setQuality(e.target.value));
     document.addEventListener('pointerlockchange', () => {
       const locked = document.pointerLockElement === this.canvas; const was = this.locked; this.locked = locked;
@@ -7676,6 +7846,10 @@ class Game {
       passo(1, 'Si parte!');
       const resto = 700 - (performance.now() - t0); if (resto > 0) await new Promise((ok) => setTimeout(ok, resto));
       this.lastT = performance.now(); this.state = 'playing';
+      // v103: due fotogrammi di gioco prima di sfumare. Senza, nei 350 ms della dissolvenza
+      // si vedeva la telecamera ancora ferma dove l'aveva lasciata startMatch (sotto una
+      // casa, interfaccia vuota) e poi lo scatto sul bus. Visto nel render.
+      await frame(); await frame();
     } catch (e) {
       console.error(e); passo(1, 'Qualcosa e\' andato storto. Riprova.');
       await new Promise((ok) => setTimeout(ok, 1500)); this.state = 'title'; this.ui.title.classList.remove('hidden');
@@ -7807,6 +7981,12 @@ class Game {
     if(this.state!=='playing'&&this.drop88)this.drop88.hud.style.display='none';if(this.dropAudio99)this.dropAudio99.update(dt);
     if(this.state!=='title'&&this.danceHint83){this.danceHint83.style.display='none';document.body.style.cursor='';}
     if(this.chars)for(const ch of this.chars)pickTrail81(ch,dt);
+    /* v103: la cupola del cielo segue la telecamera. Era ferma al centro dell'isola: dal
+       bus (a ~190 m dal centro) il lato opposto distava fino a 620 m, oltre il taglio della
+       telecamera (600), e li' si vedeva un trapezio scuro dietro il bus (lo sfondo della
+       pagina, tinto dalla tempesta). Ora e' sempre a 430 m e l'orizzonte e' all'altezza
+       degli occhi. */
+    if (this.state !== 'title' && this.world && this.world.sky) this.world.sky.position.copy(this.camera.position);
     if (this.state === 'title') this.renderer.render(this.lobbyScene, this.lobbyCam); else this.renderer.render(this.scene, this.camera);
   }
   update(dt) {
