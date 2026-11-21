@@ -4,11 +4,11 @@ Documento di passaggio di consegne. Serve a riprendere in una chat nuova senza r
 da zero e senza rifare errori già pagati.
 
 Autore: Lorenzo Deda (@22lordd), Napoli.
-Stato al 21 novembre 2026: **battlecraft v103**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
+Stato al 21 novembre 2026: **battlecraft v104**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
 **fusi**: l'isola della vecchia "mappa" è il terreno della partita.
 
 Versione del contesto: v6. Le v94-v97 non sono mai arrivate in chat:
-le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3.
+le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4.
 
 **Novità grossa della v103: il gioco adesso si può VEDERE renderizzato** (sezione 3.1), dal
 PC di Lorenzo, con la sua GPU. Molte frasi "non verificato a occhio" qui sotto si possono
@@ -49,7 +49,7 @@ ancora quella, ma adesso vive dentro il gioco.
    richiesta poggia su una diagnosi sbagliata, dirlo. Richiesta sua, testuale: «ogni volta
    che ti do sti comandi cerca di sviluppare un senso critico».
 4. **Ogni file consegnato va rinominato con un numero di versione progressivo**, mai lo
-   stesso nome due volte. La prossima è la **v104**. Nella repo il file si chiama `index.html` e la
+   stesso nome due volte. La prossima è la **v105**. Nella repo il file si chiama `index.html` e la
    versione sta in `VERSIONE`: le consegne fuori dalla repo restano `battlecraft-vNN.html`.
 5. Gli archivi del modello che ha fornito **non contengono licenza**: da verificare sul
    sito di origine prima di qualsiasi pubblicazione.
@@ -577,6 +577,33 @@ Strumenti che hanno mentito in questa sessione (aggiunti alla lista della sezion
 - il villaggio controllato solo coi numeri: i pontili risultavano "in acqua", il render
   ha mostrato che il primo stava mezzo sulla spiaggia
 
+### 9.4 Cosa cambia nella v104
+
+- **Musica della lobby all'apertura** (`provaMusica103`, chiamata quando sparisce la
+  schermata di caricamento). I browser vietano l'audio prima di un gesto (Safari sempre,
+  Chrome per i siti nuovi): dove è vietato parte al primo tocco/clic/tasto ovunque. Due
+  correzioni lungo la strada: il controllo "sta già suonando" era su `_musOn`, che diventa
+  vero anche quando `play()` viene rifiutato (dopo il tentativo all'apertura i gesti non
+  l'avrebbero più fatta partire); su iPhone il gesto che sblocca l'audio è
+  `touchend`/`click`, non `pointerdown`, quindi aggiunti.
+  Provato con un blocco simulato in Edge: rifiutata all'apertura, suona dopo un clic.
+  ATTENZIONE strumento: Playwright esegue i suoi comandi come gesto dell'utente
+  (`userActivation.hasBeenActive` diventa vero da solo), e l'Edge headless lascia partire
+  l'audio comunque: per simulare il blocco serve un flag che diventa vero solo con eventi
+  `isTrusted`.
+- **Icona con Amy**: ritratto renderizzato nella lobby vera (luci della lobby), ritagliato
+  a 64 px (scheda, solo il viso) e 180 px (Home di iPhone, testa e spalle), dentro l'HTML
+  come PNG in base64 nelle righe 7-8 (righe lunghe ~13k e ~77k caratteri: tagliare con
+  `cut`). Sostituisce il triangolo giallo SVG.
+- **Home di iPhone**: `apple-mobile-web-app-capable` (si apre a tutto schermo senza le
+  barre di Safari), titolo "Battlecraft", barra di stato nera piena (non trasparente:
+  niente sotto l'orologio), `theme-color`. NON provato su un iPhone vero, in particolare
+  che iOS accetti l'icona come data URI (dovrebbe; se mostra uno screenshot invece di
+  Amy, serve un file `apple-touch-icon.png` accanto alla pagina).
+  Da sapere: aperto dalla Home, il gioco ha un suo spazio dati separato da Safari
+  (nome, statistiche e impostazioni ripartono da zero la prima volta), e la musica
+  aspetta comunque il primo tocco.
+
 ### Cosa non è verificato (detto dal LEGGIMI stesso, e vero)
 
 - **nessuno ha visto la v93 renderizzata** tranne, eventualmente, Lorenzo
@@ -763,4 +790,6 @@ tavolato, barca ad assi, isolotto alzato.
 **v103**: pavimenti distruttibili, villaggio dei pescatori, cielo dietro il bus,
 espulsione sull'isola, scivolamento da accovacciati, primi render veri (sezione 9.3).
 
-**Prossima consegna: v104.**
+**v104**: musica della lobby all'apertura, icona con Amy, Home di iPhone (sezione 9.4).
+
+**Prossima consegna: v105.**
