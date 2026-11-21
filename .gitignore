@@ -1,0 +1,10 @@
+# sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+# strumenti
+node_modules/
+*.log
+# uscite dei test e versioni numerate di prova
+test/out/
+battlecraft-v*.html

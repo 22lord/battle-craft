@@ -1,0 +1,22 @@
+const {load,THREE:T}=require('./harness.cjs');const vm=require('vm'),assert=require('assert');
+(async()=>{const c=load(process.argv[2]);await c.init();c.window.keysDefaults();c.document.documentElement={style:{setProperty(){}}};const A=c.API;
+c.requestAnimationFrame=f=>setTimeout(()=>f(performance.now()),5);c.setTimeout=setTimeout;
+const G=Object.create(A.Game.prototype);Object.assign(G,{scene:new T.Scene(),physics:new A.Physics(),state:'title',time:0,chars:[],bots:[],outfit:0,playerName:'Test',canvas:c.document.createElement('canvas'),renderer:{toneMappingExposure:1,setPixelRatio(){},setSize(){},compile(){G._compiled=G.state;}},lobbyCam:new T.PerspectiveCamera(),sens:1,jumpBuf:0,zoneTickT:0,camera:new T.PerspectiveCamera(),stats:{xp:0}});G.scene.fog=new T.Fog(0,50,80);G.world=new A.World(G);G.world.build();
+for(const [key,cls] of Object.entries({audio:'AudioSys',fx:'FX',input:'Input',cam:'CameraRig',hud:'HUD',combat:'Combat',build:'BuildSystem',edit:'EditSystem',harvest:'Harvest',items:'Items',zone:'SafeZone',drop88:'Drop88'})){G[key]=new A[cls](key==='input'?G.canvas:G);}
+G.sun=new T.DirectionalLight();G.hemi=new T.HemisphereLight();for(const k of Object.getOwnPropertyNames(A.HUD.prototype))if(k!=='constructor')G.hud[k]=()=>{};
+G.ui=Object.fromEntries(['title','end','pause','pauseNote','q1','q2'].map(k=>[k,c.document.createElement('div')]));
+const el=c.document.getElementById('matchLoad102');const cls=new Set();el.classList={add:(...a)=>a.forEach(x=>cls.add(x)),remove:(...a)=>a.forEach(x=>cls.delete(x)),contains:x=>cls.has(x)};
+const fill={style:{}},st={textContent:''};el.querySelector=s=>s==='.fill'?fill:st;
+let locks=0;G.requestLock=function(){locks++;};
+const log=[];const iv=setInterval(()=>log.push([G.state,st.textContent,fill.style.width,cls.has('on')]),20);
+G.bindUI();const t0=Date.now();c.document.getElementById('btnPlay').events.click();
+const mid=[G.state,cls.has('on'),locks];
+await new Promise(r=>{const w=setInterval(()=>{if(G.state==='playing'&&!G._carica102){clearInterval(w);r();}},20);});
+clearInterval(iv);await new Promise(r=>setTimeout(r,450));
+const stati=[...new Set(log.map(l=>l[0]+' | '+l[1]+' | '+l[2]))];
+console.log('subito dopo il clic: stato',mid[0],'overlay',mid[1],'aggancio mouse',mid[2]);console.log(stati.join('\n'));
+console.log('durata',Date.now()-t0,'ms; compilato in stato',G._compiled,'; bus fermo durante il caricamento: elapsed',G.drop88.elapsed,'; overlay acceso alla fine',cls.has('on'),'; giocatori',G.chars.length);
+assert.equal(mid[1],true);assert.equal(mid[2],1);assert.equal(G._compiled,'loading102');assert.equal(G.drop88.elapsed,0);assert.equal(cls.has('on'),false);assert.equal(locks,1);assert.equal(G.chars.length,30);
+assert(log.some(l=>l[0]==='loading102'));
+console.log('LOAD PASS');process.exit(0);
+})().catch(e=>{console.error(e.stack);process.exit(1)});

@@ -1,0 +1,6 @@
+const fs=require('fs'),vm=require('vm'),T=require('./lib/three.cjs'),assert=require('assert');
+const src=fs.readFileSync(process.argv[2],'utf8');let f;if(src.includes('function stableSun93')){f=src.slice(src.indexOf('function stableSun93'),src.indexOf('\nfunction ',src.indexOf('function stableSun93')+10));}else{f='function stableSun93(sun,p){'+src.match(/this.sun.position.set\(p.pos.x \+ 92[^\n]+/)[0].replaceAll('this.sun','sun').replaceAll('p.pos','p')+'}';}
+const c={THREE:T};vm.createContext(c);vm.runInContext(f+';this.run=stableSun93;',c);const sun=new T.DirectionalLight();sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-42,right:42,top:42,bottom:-42});
+sun.shadow.camera.updateProjectionMatrix();
+const uv=p=>{c.run(sun,p);sun.updateMatrixWorld(true);sun.target.updateMatrixWorld(true);sun.shadow.updateMatrices(sun);return new T.Vector3(4,2,7).applyMatrix4(sun.shadow.matrix).multiplyScalar(1024);};const a=uv(new T.Vector3(0,0,0));let err=0;for(let i=1;i<100;i++){const b=uv(new T.Vector3(i*.013,0,i*.007));for(const k of ['x','y']){const d=b[k]-a[k];err=Math.max(err,Math.abs(d-Math.round(d)));}}
+console.log({maxSubTexelDrift:err});assert(err<1e-6,'static shadows must not crawl by fractional texels as the player moves');

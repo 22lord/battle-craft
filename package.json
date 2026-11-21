@@ -1,0 +1,10 @@
+{
+  "name": "battlecraft",
+  "version": "1.0.2",
+  "private": true,
+  "description": "Battle royale in terza persona con costruzioni, in un solo file HTML (Three.js r160).",
+  "author": "Lorenzo Deda (@22lordd)",
+  "scripts": {
+    "test": "node test/run-all.cjs"
+  }
+}

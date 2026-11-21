@@ -1,0 +1,669 @@
+# Contesto completo — gioco "Battlecraft" (ex "Battle Legends") con l'isola dentro
+
+Documento di passaggio di consegne. Serve a riprendere in una chat nuova senza ripartire
+da zero e senza rifare errori già pagati.
+
+Autore: Lorenzo Deda (@22lordd), Napoli.
+Stato al 21 novembre 2026: **battlecraft v102**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
+**fusi**: l'isola della vecchia "mappa" è il terreno della partita.
+
+Versione del contesto: v5 (prima nella repo). Le v94-v97 non sono mai arrivate in chat:
+le differenze v93→v98 sono in 9.1, v99→v102 in 9.2.
+
+---
+
+## 0. Come leggere questo documento — cosa è cambiato rispetto alla v2
+
+- **Non ci sono più due progetti.** Nella v93 dentro l'HTML ci sono `MARE = 0`,
+  `RAGGIO_ISOLA = 150`, `MAPPA = 440`, `CITTA`, `CRESTA`, i tre `LAGHI` (Lago Grande,
+  Lago Alto, Laguna), i `PATHS` e i materiali `MX`: è il terreno della mappa v6 dentro il
+  gioco. Il titolo della pagina è «BATTLECRAFT — Ultimo in piedi».
+- **Le versioni dalla v70 alla v92 sono state fatte in altre chat e non sono documentate
+  qui.** Si sa solo quello che dice il LEGGIMI della v93 (sezione 9). Se serve sapere
+  quando è entrato qualcosa, chiedere a Lorenzo o confrontare i file.
+- **I sorgenti divisi non ci sono più.** `/home/claude/game/`, `/home/claude/mappa/`,
+  `/home/claude/tools/`, `build.py`, `parts/`, il renderer finto, il semplificatore:
+  tutto perso con il vecchio ambiente. **Il sorgente adesso è l'HTML compilato stesso**
+  (vedi sezione 2).
+- **C'è Three.js r160 vero in Node** (sezione 3): cambia cosa si può verificare.
+
+Le sezioni 1, 4, 6, 7, 8 valgono come prima. La 10 (l'isola) resta, perché l'isola è
+ancora quella, ma adesso vive dentro il gioco.
+
+---
+
+## 1. Vincoli fermi (richieste esplicite, non negoziabili)
+
+1. **Non nominare mai il titolo del gioco di riferimento**, nemmeno nei commenti, nei
+   testi, nel titolo o nei LEGGIMI. Si dice "il riferimento".
+   ATTENZIONE: il LEGGIMI della v93 lo nomina una volta (sezione «Confronto e
+   prestazioni»). Il codice dell'HTML invece è pulito (0 occorrenze, verificato). Alla
+   prossima consegna quella riga va corretta.
+2. **Non affermare di aver ottenuto una corrispondenza perfetta o una percentuale di
+   fedeltà senza un metodo di misura definito.**
+3. **Senso critico**: cercare la causa vera con i dati, non eseguire alla lettera. Se una
+   richiesta poggia su una diagnosi sbagliata, dirlo. Richiesta sua, testuale: «ogni volta
+   che ti do sti comandi cerca di sviluppare un senso critico».
+4. **Ogni file consegnato va rinominato con un numero di versione progressivo**, mai lo
+   stesso nome due volte. La prossima è la **v103**. Nella repo il file si chiama `index.html` e la
+   versione sta in `VERSIONE`: le consegne fuori dalla repo restano `battlecraft-vNN.html`.
+5. Gli archivi del modello che ha fornito **non contengono licenza**: da verificare sul
+   sito di origine prima di qualsiasi pubblicazione.
+6. Tono: diretto, colloquiale, niente professorino, niente complimenti di circostanza.
+   Se sbaglia, dirglielo. Risposte corte dove si può.
+7. Mondo **cartoon, stile del riferimento**: colori pieni, forme leggibili da lontano,
+   niente realismo.
+
+---
+
+## 2. Il vincolo tecnico che decide tutto
+
+**Un solo file HTML.** Niente passo di compilazione per Lorenzo, niente file esterni.
+Three.js r160 da CDN con versione fissata (`importmap` su
+`cdn.jsdelivr.net/npm/three@0.160.0`), tutto il resto — modello, animazioni, musica,
+texture — dentro il file in base64 (+gzip dove serve). 16 payload incorporati, invariati
+dalla v92.
+
+### Com'è fatto il file (v93: 15,9 MB, 7.777 righe; v98: 7.794 righe, stessa struttura)
+
+- righe 1-443: HTML, CSS, interfaccia, importmap
+- riga 445: libreria di decompressione (minificata)
+- riga 447 in poi: **un unico `<script type="module">`** con tutto il gioco
+- alcune righe sono enormi (fino a 5,8 milioni di caratteri): sono i payload. **Non
+  aprirle con Read e non stamparle**: tagliare sempre con `cut -c1-200`
+
+Mappa approssimativa del modulo (numeri di riga della v93; nella v98 dalla riga ~1728 in
+giù sono spostati di +3/+20; si spostano a ogni modifica):
+
+| righe | cosa |
+|---|---|
+| 453-459 | `PROP_*` modelli di scenario (pino, albero, cespuglio, auto) |
+| 498-760 | comandi, `QUALITY`, `CAMCFG`, `MOVECFG`, `JUMPCFG`, `BUILDCFG`, armi, rumore |
+| 807 | `AudioSys` |
+| 943-1230 | texture procedurali, `CONTORNO`, `VEGCFG`, prop, geometrie di base |
+| 1244-1700 | armi procedurali, personaggio procedurale (ripiego) |
+| 1699-2060 | lettore GLB, retarget delle ossa, `adaptLoadedModel` |
+| 2155-2950 | animazione del modello esterno, IK braccia, vetrina, clip, `LOCO` |
+| 2953-3170 | `MICRO` micromovimenti |
+| 3176-3310 | **terreno dell'isola** (`terrainHeight`, `raggioMosso`, colori) |
+| 3311 | `Physics` |
+| 3548-3730 | natura, materiali, `RenderChunks` |
+| 3730 | `World` (fino a ~4180), poi `LUOGHI`, `MX`, costruzione dei luoghi |
+| 4691-5025 | bot: nomi, palette, IK "umano" di mani/piedi/sguardo |
+| 5026 | `Character` |
+| 5510-6170 | `Combat`, `FX`, costruzioni (`BuildGrid`, `SupportGraph`, `BuildSystem`, `EditSystem`), `Harvest`, `Items`, `SafeZone`, `BotBrain` |
+| 6320-6535 | lobby e set scenografico |
+| 6574-6643 | **accovacciamento** (`canStand`, `updateCrouch`, `crouchPose`) |
+| 6644-6975 | `Drop`, input (gamepad, touch), `CameraRig`, `HUD` |
+| 7007 | `Game` |
+| 7591-7700 | **prova grafica v93** (`stableSun93`, `labRoute93`, `VisualLab93`) |
+
+### Come modificarlo senza sorgenti divisi
+
+Opzioni, da decidere al primo intervento serio:
+- **modifiche puntuali** con Edit direttamente sull'HTML, cercando con grep. Va bene per
+  ritocchi
+- **ricostruire la cartella `parts/` + `build.py`**: estrarre il modulo in file per area
+  (i payload in file a parte), ricompilare. Costa un'ora ma rende sicuri i lavori grossi
+
+In entrambi i casi: dopo ogni modifica rilanciare i test della sezione 5.
+
+Nota di stile: il codice v93 aggiunto dall'altra chat è compatto, quasi minificato, con
+suffisso `93` sui nomi (`VisualLab93`, `crouch90`) e commenti in inglese. Il resto è nello
+stile vecchio (italiano, commenti lunghi).
+
+---
+
+## 3. IL LIMITE CENTRALE — leggere prima di toccare le luci
+
+**Nell'ambiente di lavoro la rete non c'è.** Verificato anche il 21/11: la richiesta alla
+CDN di Three.js torna **403 dal proxy**. Niente CDN, niente npm, niente pip.
+
+Cosa c'è di nuovo rispetto alla v2:
+- **Node 22** è installato (`/opt/node22/bin/node`). I test della v93 sono stati scritti
+  per Node 24 ma girano anche su 22
+- nella repo c'è **`test/lib/three.cjs`: Three.js r160 vero**, build CommonJS. Con
+  questo i test caricano il modulo del gioco in Node (`vm` + un canvas finto) e usano lo
+  scheletro, le geometrie, le matrici delle ombre e la fisica **veri**
+- l'avviso «build/three.js deprecated» che stampa è normale, non è un errore
+
+Cosa **ancora non si può fare**: vedere un fotogramma. Non c'è WebGL. Anche l'altra chat
+che ha fatto la v93 ha provato un browser di anteprima e ha avuto `Error creating WebGL
+context`. Quindi **l'aspetto della v93 non l'ha mai visto nessuno tranne Lorenzo**.
+
+Va bene per: posizioni, ossa, lunghezze, collisioni, logica, matrici, numeri.
+**Non va bene per: luci, ombre, esposizione, colore finale, naturalezza del movimento.**
+
+Il vecchio `test/three_stub.js` (renderer WebGL1 finto) è perso. Se servisse di nuovo una
+composizione approssimativa, va riscritto o sostituito da un rasterizzatore in numpy.
+
+### Il sostituto: il modello analitico delle luci
+
+Le luci non si guardano, si **calcolano**. Formule di Three.js r160 per
+`MeshStandardMaterial`:
+
+```
+irradianza direzionale = colore_luce * intensita * max(0, N·L)
+irradianza emisferica  = mix(terra, cielo, 0.5 + 0.5*N.y) * intensita
+irradianza da ambiente = PI * radianza_ambiente * envMapIntensity
+uscita                 = irradianza * albedo / PI          (BRDF di Lambert)
+poi: tone mapping lineare (x esposizione), poi codifica sRGB
+```
+
+Valori misurati, da riusare:
+
+- **albedo della pelle**: lineare `(0.700, 0.502, 0.475)`
+- **albedo della maglietta nera**: `0.031` lineare
+- **radianza media della mappa d'ambiente**: `(0.089, 0.174, 0.179)`
+
+**Verificato** a suo tempo: previsione 191 su 255 per la pelle di fronte, misura sullo
+screenshot reale 193. Entro l'1%. Attenzione: la v93 cambia sole, luce diffusa e foschia
+nel suo "DOPO", quindi prima di riusare questi numeri **leggere i valori nuovi nel codice**.
+
+---
+
+## 4. Il metodo — la parte più importante del documento
+
+**Misurare, non guardare. E buttare via gli strumenti che si rivelano difettosi.**
+
+Ogni volta che qualcosa "sembrava sbagliato", prima si è costruito uno strumento per
+misurarlo, poi si è deciso. Molte diagnosi a occhio si sono rivelate false, comprese
+quelle fatte con sicurezza.
+
+### Strumenti che hanno mentito (e sono stati buttati)
+
+- misurare la planarità lungo +z quando il davanti è −z
+- assumere `dt = 1/60`
+- misurare il ginocchio destro quando è il sinistro che si raccoglie
+- interrogare il terreno sotto ciascun piede separatamente: dava 31 cm di dislivello fra
+  piedi distanti 20 cm (era la pendenza del terreno, letta come piede alzato)
+- mediare la luminanza su un riquadro che attraversa un braccio cilindrico: la modellazione
+  si annulla da sola nella media
+- mascherare "la figura" con una soglia di luminosità: prendeva anche l'interfaccia
+- misurare l'angolo diedro per trovare gli spigoli vivi: dava 75° sul corpo liscio
+  originale, cioè misurava altro. Sostituito dal test indipendente sul verso `fn·vn`
+- provare la locomozione nel mondo vero: il personaggio sbatteva negli ostacoli, 11 m
+  percorsi contro 18 attesi. Sostituito da un banco di prova piatto e vuoto
+  (nota: il percorso diagnostico della v93 risolve lo stesso problema in un altro modo,
+  cercando la strada con A* sulla geometria della mappa ed evitando gli ostacoli)
+
+### Diagnosi sbagliate, poi corrette dalla misura
+
+- «è poco illuminata» → mediana **193 su 255**: era **sovraesposta**
+- «i capelli sono pixellosi, serve più geometria» → **34.000 triangoli su 90 pixel** di
+  testa: sono già sub-pixel, più geometria peggiora. Era filtraggio (anisotropia a 1) e
+  risoluzione di rendering
+- «il pavimento della città è buggato» → z-fighting fra piazza e strade complanari
+- «l'acqua è più alta del molo» → non era il molo (vedi sezione 10.4)
+
+### Quando i test non bastano
+
+Tre volte è servito guardare i **fotogrammi estratti con ffmpeg** dalle registrazioni
+dello schermo di Lorenzo: così sono usciti il bug delle braccia bloccate e quello del
+fucile che fluttuava, che nessuna misura numerica aveva mostrato. **I suoi screenshot e
+video sono una fonte di verità che i test non sostituiscono.** Con la v93 questo vale
+ancora di più: il pulsante «Salva immagine» della prova grafica esporta un 1280×720 e
+«Salva misure» i dati delle traversate. Chiederglieli.
+
+---
+
+## 5. Strumenti e test
+
+### Persi con il vecchio ambiente (da ricostruire solo se servono)
+
+| file | cosa faceva |
+|---|---|
+| `fbx2.py`, `fbxmodel.py`, `fbxanim.py` | lettore FBX binario, scheletro/mesh/pelle, clip |
+| `glbskin.py` | scrittore GLB riggato (indici u32 oltre 65.536 vertici) |
+| `posa.py` | posa e skinning in numpy |
+| `collassa.py` | **semplificatore a contrazione di spigoli (Garland-Heckbert)** |
+| `test/run_test.py` | la vecchia suite da 76 test |
+| `test/shot.py` + `sc_*.js` | renderer finto + 139 scenari di misura |
+
+Le note tecniche per riscriverli sono nelle sezioni 6 e 8. **`decimate.py` (griglia) non
+va riscritto**: era sbagliato (sezione 6).
+
+### Disponibili adesso (nella repo, cartella `test/`; prima nello zip della v93)
+
+```
+test/run-all.cjs            lancia tutto:  node test/run-all.cjs   (prova index.html)
+test/lib/three.cjs          Three.js r160 CommonJS
+test/harness.cjs            carica il modulo del gioco in Node (vm + DOM/canvas finti)
+test/harness-lite.cjs       versione leggera (accovacciamento)
+test/accovacciamento.cjs    passi bassi, niente incroci, ossa fisse, soffitto
+test/ombre.cjs              deriva della proiezione delle ombre
+test/mappe-alternative.cjs  semi 123456 e 999
+test/integrazione.cjs       mappa, bot, audio spari, prova grafica, riavvio
+test/mondo.cjs SEME check   case senza terreno dentro, auto, casse, atterraggi, elementi tolti
+test/tregua-bot.cjs         tregua fra bot
+test/suoni-lancio.cjs       lancio intero con audio finto che registra volumi
+test/mira-assistita.cjs     mira per telefono/controller/mouse, muri, portata
+test/caricamento.cjs        schermata di caricamento
+test/partita-simulata.cjs   rapporto (senza controlli): quando muoiono i bot
+```
+
+Tempi: ~10 minuti in tutto sul banco di prova del cloud.
+
+**Regola**: questi test devono restare PASS dopo ogni modifica. Quando si aggiunge una
+funzione, si aggiunge il suo test.
+
+---
+
+## 6. Il personaggio e le animazioni
+
+Modello femminile fornito da Lorenzo (951.810 triangoli originali), riggato Mixamo:
+**33 ossa**, prefisso `mixamorig:`.
+
+Pipeline costruita da zero: FBX binario → numpy → GLB → base64+gzip → dentro l'HTML.
+
+Cose non ovvie imparate strada facendo:
+
+- FBX: record `(endOffset, numProperties, propertyListLen, nameLen, name, props, children)`,
+  offset a 64 bit dalla 7500, array compressi con zlib
+- in `Connections` **il primo id è il FIGLIO**
+- unità di tempo FBX: `46186158000` per secondo
+- trasformazioni: `localMatrix = T · Rpre · R · S`, riposo = `T · Rpre`, quindi
+  **`localAnim = restLocal × R_anim`**. Verificato contro `TransformLink` con errore 0,00000
+
+### La semplificazione della mesh — la storia completa
+
+Prima versione: **raggruppamento a griglia**. Fonde i vertici che capitano nella stessa
+cella. Due vertici possono stare nella stessa cella **senza essere collegati**: le due
+facce opposte di un nastro di capelli, due ciocche affiancate. Fondendoli si strappa la
+superficie. Misurato: bordo aperto da 217 m a 653 m, **63.902 spigoli aperti (56%)** contro
+0 dell'originale. Erano i buchi che Lorenzo continuava a segnalare e che venivano cercati
+altrove (verso delle facce, normali, luci).
+
+Seconda versione, quella giusta: **contrazione di spigoli con metrica quadrica**. Lavora
+solo lungo spigoli che esistono davvero, quindi la topologia non si rompe mai. Risultato:
+**0 spigoli aperti**. Tre accorgimenti che contano:
+
+1. **Saldatura prima, separazione dopo.** Il modello ha il 15% di vertici doppi, sdoppiati
+   sulle cuciture della texture. Si saldano per posizione prima di cominciare, le UV
+   viaggiano **per angolo di triangolo**, e alla fine i vertici si risdoppiano dove le UV
+   non coincidono.
+2. **Regola di contenimento delle isole UV.** Senza, 2.706 triangoli finivano a cavallo di
+   due isole dell'atlante e campionavano il vuoto: erano le **macchie** che ha segnalato
+   (807 campionavano nero).
+3. **Normali per angolo con separazione degli spigoli vivi** (soglia 55-75°). Mediare le
+   normali attraverso una piega dà un vertice che punta dove non c'è superficie: era il
+   **puntino sulla spalla** (2,07% dei vertici della pelle con normale opposta ai vicini,
+   sceso a 0,000%).
+
+Esperimento fatto e **rigettato**: pesare la quadrica con la curvatura. La silhouette
+peggiorava (p99 da 5,42 a 6,18 mm). Annullato.
+
+### Decimazione per regione
+
+La riduzione non è uniforme: la dimensione della cella dipende dall'osso che pesa di più
+su ogni vertice. Testa e mani 6,8 mm, braccia 14-16, gambe e busto 20. Il **62% dei
+triangoli dell'eroe sta sulla testa**, che è dove si guarda.
+
+### Le 19 clip
+
+`idle, cammina, corre, corsa_lenta, strafe_sx, strafe_dx, strafe_sx_lento, strafe_dx_lento,
+salto, gira_sx, gira_dx, spara, spara2, muore, posa_lobby, ballo1, ballo2, parte,
+salto_indietro`
+
+Quaternioni int16 divisi per `scala` (4096), **non normalizzati** — il lettore normalizza
+in `applicaPosa`. La posa della lobby è "Standing Pose 2".
+
+Non c'è una clip di accovacciamento: la v93 costruisce la postura bassa in codice
+(`crouchPose`) partendo dalle clip erette (sezione 9).
+
+---
+
+## 7. Numeri tarati del gioco (e perché)
+
+Valori fissati fino alla v69. **Prima di fidarsi, ricontrollarli nella v93**: in mezzo ci
+sono 24 versioni non documentate.
+
+### Velocità
+
+| | valore | nota |
+|---|---|---|
+| `MOVECFG.walk` | 2,6 m/s | erano 5,0: le clip andavano al 307% |
+| `MOVECFG.run` | 4,6 m/s | erano 7,6: al 207% |
+| `LOCO.vCammina` | 1,77 u/s | velocità naturale della clip |
+| `LOCO.vCorre` | 3,99 u/s | da moltiplicare per `m.scale` (0,92) |
+
+### Luci della lobby
+
+| luce | valore | posizione |
+|---|---|---|
+| emisferica | 0,08 (0,30 se le ombre sono spente) | — |
+| frontale "faccia" | 0,32 | (0,6, 1,7, 6) |
+| **chiave** | 4,4 | (5,49, 4,40, 2,56) — azimut 65°, elevazione 30° |
+| riempimento | 0,12 | (−4, 2, 5) |
+| **controluce** | 1,5 | (−3,6, 3,4, −4,4) — **proietta ombra anche lui** |
+| esposizione | 0,80 lobby, 0,86 partita | |
+| `envMapIntensity` | **0,16 sul personaggio**, 0,75 sul set | |
+
+Previsione sulla pelle: verso la chiave 205, di fronte 144, in ombra 106. Rapporto
+chiaro/scuro **1,94** (era 1,35, cioè piatto).
+
+**La chiave sta davanti per illuminare il viso, il controluce sta dietro per proiettare
+l'ombra verso la camera.** Sono due esigenze opposte: l'unico modo è separarle.
+
+### Micromovimenti (`MICRO`)
+
+`resp` 0,21 Hz (~13 respiri/min) · `respBusto` 0,019 rad · `peso` 0,053 Hz (un travaso ogni
+~19 s) · `pesoRoll` 0,052 rad · `sguardoY` 0,23 · sosta fra sguardi 1,4-4,2 s.
+
+Misurato su 40 secondi simulati: **piedi 0,0 mm**, testa 9 mm laterali, mano appoggiata
+entro 5 mm dall'ancoraggio.
+
+---
+
+## 8. Trappole note (costate tempo, non ripeterle)
+
+1. **Doppio saltello**: la radice è un osso dentro il supporto; aggiungere il saltello a
+   entrambi lo raddoppia. Esiste `rootRestY` apposta.
+2. **La posa di riposo va fotografata alla costruzione del modello**, in
+   `userData.qRiposo`, PRIMA che l'IK tocchi le ossa.
+3. **`gunzip` restituisce ArrayBuffer, non Uint8Array**: senza conversione il ciclo di
+   lettura dell'intestazione non termina mai.
+4. **La clip dell'arma non va mediata con la locomozione, va sostituita**: serve la
+   maschera `sotto`, se no le braccia pendono.
+5. **Ruotare il bacino sposta i piedi**: 2,7 cm per grado di rollio. Senza IK, tutto ciò che
+   deve lasciare i piedi a terra va messo SOPRA il bacino. (L'accovacciamento v93 riduce
+   proprio il rollio del bacino ereditato dalle clip erette.)
+6. **CCD: la rotazione va portata nel sistema del PADRE e premoltiplicata**:
+   `locale_nuovo = (padre⁻¹ · q · padre) × locale`.
+7. **Una superficie trasparente in più lascia sempre un bordo dove finisce.** Meglio
+   dipingere la sfumatura nella texture di sotto.
+8. **`setQuality` deve ricompilare i materiali anche della lobby.**
+9. **Il toro di Three.js parte dall'asse +X**: senza offset sulla rotazione z gli archi
+   finiscono davanti invece che dietro (`-Math.PI/2 - arco/2`).
+10. **Il modello ha SOLO la texture di colore**: niente normal map, niente roughness map.
+    Non è andata persa, non c'è mai stata.
+11. **Attenzione alle regex con prefisso di commento opzionale e DOTALL**: una volta hanno
+    mangiato due metodi interi (`faiAcque` e `faiCitta`), riscritti a mano. Vale doppio
+    adesso che si lavora su un HTML da 15 MB con righe da milioni di caratteri: niente
+    sostituzioni con regex larghe sul file intero.
+12. **Le righe dei payload non si leggono**: un `cat`, un `sed -n` o un Read senza taglio
+    su quelle righe riempie il contesto. Sempre `cut -c1-200`.
+
+---
+
+## 9. Stato del gioco — battlecraft v93
+
+### Cosa fa la v93 (dal suo LEGGIMI, scritto dall'altra chat)
+
+**Accovacciamento nella partita normale**: passi bassi dedicati, appoggi nel mondo,
+ginocchia orientate col bacino, rollio del bacino ridotto, torace che tiene la mira, piedi
+riorientati dalla posa originale, correzioni in curva a velocità limitata (niente caviglie
+che saltano), lunghezze degli arti mai toccate, controllo del soffitto, transizione in
+piedi. Numeri: caviglia max da 20,25 cm (v92) a 15,78; incrocio dei piedi da 13,72 cm a 0.
+
+**Prova grafica** (pulsante PROVA GRAFICA in lobby, `VisualLab93`): ambiente diagnostico
+sulla mappa vera, separato dal combattimento.
+- viste fisse: casa, pino, panorama
+- **Mostra PRIMA / DOPO** sullo stesso punto del percorso
+- percorso automatico di ~40,76 m trovato con A* evitando gli ostacoli
+- accovacciamento attivabile
+- **Salva immagine** (1280×720, col filtro colore) e **Salva misure** (FPS medi e
+  fotogramma al 95° percentile, primi 3 secondi esclusi, 30 personaggi con movimenti
+  ripetibili senza IA)
+- il DOPO: sole più alto e meno arancione, luce diffusa azzurra, cielo e foschia
+  coordinati, ombre allineate ai texel (`stableSun93`), ombre di contatto sotto i piedi,
+  un pino con tre fasce di luce, tre cespugli con materiale opaco
+
+**Il DOPO non è esteso alla partita normale**, per scelta: manca la verifica visiva.
+Non fatti: rocce, transizioni del terreno, materiali delle armi, revisione della corsa.
+
+### 9.1 Cosa cambia dalla v93 alla v98 (diff del codice, payload identici)
+
+Il diff è piccolo: 35 righe. I 6 payload grossi (modello, clip, audio, prop) sono
+identici byte per byte. Non c'è un LEGGIMI della v98: niente note su cosa è stato
+verificato a occhio.
+
+**Risoluzione di rendering** (codice col suffisso `94`): menu a tendina nel menu
+principale e nella pausa — Automatica, Full HD, 1440p, 4K. Salvata in `localStorage`
+(`battlecraft_resolution94`). Fuori da "Automatica" forza pixel ratio 1 e calcola il buffer
+con `renderSize94`, limitato da `maxTextureSize`; sotto il menu scrive i pixel effettivi.
+Note:
+- su uno schermo 1080p, "4K" vuol dire disegnare 4 volte i pixel e poi rimpicciolire:
+  supercampionamento, pesante. Su telefono o portatile debole può crollare
+- fuori da "Automatica" salta anche il supercampionamento della lobby (`rapportoPixel`
+  esce subito)
+- il `localStorage.setItem` nel cambio non ha il `try`: dove lo storage è bloccato lancia
+  un errore (la lettura invece è protetta)
+
+**Accovacciamento ritoccato** (`crouchPose93`, `applyMovement`):
+- velocità da accovacciato da ×0,45 a **×0,28** (camminata ~0,73 m/s, corsa ~1,29 m/s)
+- ciclo del passo più corto (avanzamento fase `/1,25` → `/0,8`), appoggio 0,58 → 0,60
+- passo in avanti da 0,34 a 0,20 m; soglia di rilascio dell'appoggio da 0,65 a 0,34 m
+- la posizione del bacino viene riportata a quella di riposo (`pRiposo`), così non eredita
+  l'ondeggiamento della clip eretta
+- **nuovo vincolo finale**: la caviglia viene tenuta sotto la sua anca, ±22 cm avanti e
+  indietro, 10-20 cm di lato
+
+Possibile scivolamento, **calcolato dal codice, non misurato**: un ciclo completo copre
+0,8 m di spostamento del corpo, l'appoggio è il 60%, quindi il corpo avanza 0,48 m mentre
+il piede dovrebbe restare fermo. Il piede atterra a +0,20 m e dovrebbe finire a −0,28, ma
+il vincolo lo ferma a −0,22: negli ultimi ~6 cm di ogni appoggio il piede viene trascinato.
+In più il vincolo è applicato DOPO il limite di velocità del piede (5 m/s), quindi in
+teoria può spostarlo di colpo. Da verificare con una misura vera (posizione nel mondo del
+piede in appoggio, fotogramma per fotogramma) o col video di Lorenzo.
+
+**Prova grafica nascosta**: `VisualLab93` ora si crea solo se l'indirizzo contiene
+`?visualtest`. Per usarla: aggiungere `?visualtest` in fondo all'indirizzo nel browser
+(es. `.../battlecraft-v98.html?visualtest`).
+
+### 9.2 Cosa cambia dalla v99 alla v102 (fatte in questa chat, tutte con test)
+
+**v99 — suoni del lancio** (`DropAudio99`, livelli in `DROPSND99`): motore del bus in loop
+(dentro ovattato, poi si allontana col bus), vento che sale con la velocita' di caduta e
+cala sotto il deltaplano, strappo + tela all'apertura, colpo all'atterraggio; anche i bot
+vicini, spazializzati, al massimo uno ogni 0,5 s. Loop senza cucitura (periodici con
+margine, `loopStart`/`loopEnd`), livellati a -18 LUFS, volumi 0,30-0,42 contro 0,85 degli
+spari. I sorgenti preparati sono in `assets/audio/`. Ascolto non verificato.
+
+**v100 — mira assistita** (`AimAssist99`, regolazioni in `AIM99`): telefono = auto-mira
+quando spari con un nemico entro ~8 gradi + rallentamento + attrazione verso il petto;
+controller = solo rallentamento e attrazione leggera mentre spari o tieni LT; mouse =
+niente. Mai attraverso i muri, mai oltre la portata dell'arma. Tolto lo sprite arancione
+del sole (resta la luce e l'alone caldo nel cielo).
+
+**v101 — niente zoom su Safari iPhone**: viewport senza zoom, `touch-action`, blocco di
+pizzico e doppio tocco su gioco e comandi, campo nome a 16 px. Non provato su iPhone vero.
+
+**v102**:
+- **piazzole sotto le case** (`PADS102`, `terrainHeight` = naturale + piazzole): prima in
+  19 case su 33 il terreno entrava sopra il pavimento (fino a 1,32 m). Parte piana = casa
+  + 1,2 m + portico dal lato porta, sfumatura 6 m, fra case vicine l'altezza passa pesata
+  sulla distanza. La mesh del terreno si rifa' dopo le case (`rifaiTerreno102`). Prezzo:
+  piccoli terrazzamenti in collina (punti oltre 40 gradi vicino alle case da 1,0% a 1,6%;
+  il personaggio cammina su qualsiasi pendenza del terreno)
+- **auto mai davanti alle porte** (`liberaPorte102`): erano tutte e tre davanti a una porta
+- **oggetti appoggiati sui pendii** (`hMin102`): casse (anche quella in cima, che prima
+  galleggiava nel vuoto), pozzi, cataste, orti, fuochi, cassonetti, bancarelle, panchine
+- **tolti perche' abbozzati**: bunker (sotto terra, irraggiungibile), tende a piramide,
+  carro del fieno (palla rosa), cartello bianco senza scritta, alberi cilindro+sfere
+  (prato comune, isolotto, albero gigante con porticina), poltrona di due scatole.
+  Tenuti: meteorite, "22" coi sassi, pietre in equilibrio
+- **bot**: atterraggi a campionamento del punto piu' lontano (minimo 34-37 m), ogni bot
+  salta quando il bus e' piu' vicino alla sua meta; tregua fra bot 40-65 s dopo
+  l'atterraggio (`tregua102`), che salta se vengono colpiti o se sono scesi a meno di 28 m.
+  Partita simulata: distanza mediana fra bot all'atterraggio da 14 a 38 m, primi morti da
+  24 s a 42-52 s
+- **schermata di caricamento** fra Gioca e la partita (`avvia102`): mouse agganciato subito,
+  partita creata e shader compilati dietro la schermata, bus fermo finche' non si vede
+
+Interpretazione da confermare con Lorenzo: "pavimenti bloccati" letto come terreno dentro
+le case. Se intendeva che non si possono rompere, e' un'altra modifica.
+
+### Cosa non è verificato (detto dal LEGGIMI stesso, e vero)
+
+- **nessuno ha visto la v93 renderizzata** tranne, eventualmente, Lorenzo
+- nessuna misura FPS reale
+- l'audio direzionale passa i test numerici ma non è stato ascoltato
+- nessuna prova su telefono
+- il confronto col riferimento sulle quattro azioni partenza/corsa/curva/arresto non è
+  stato fatto con misure, solo guardando fotogrammi del suo video
+
+### Aperto, ereditato dal brief sulla naturalezza del movimento
+
+Lorenzo ha consegnato un **brief formale in 8 punti** (analizzare prima di modificare;
+stabilità di testa e collo; fasi di appoggio dei piedi; bacino, busto e spalle;
+comportamento in ogni azione; armi, mani e braccia; ordine e limiti delle correzioni;
+ricerca e verifica). Testuale: «Se hai difficoltà, dubbi o risultati poco credibili, cerca
+su internet prima di continuare per tentativi» e «Non definire il movimento "umano" o
+"risolto" soltanto perché il codice funziona senza errori».
+
+Alla v69 restavano aperti i punti sotto. **Non è noto quali siano stati affrontati fra la
+v70 e la v92**: verificare nel codice prima di ripartire.
+
+- blocco dei piedi con IK durante la locomozione (alla v69: scivolamento ~20% della
+  velocità del corpo, 48 cm/s a passo, 101-152 in corsa). Nella v93 c'è un blocco
+  `feetHuman`/`solveLimb` (righe ~4711-5025): da capire cosa copre già
+- limiti articolari di testa e collo sugli assi veri
+- salto e atterraggio
+- sistema mani-arma (nella v93 c'è `rifleHuman`/`routeHand`: idem, da capire)
+- clip della corsa all'indietro
+- sovrapposizione mira/sguardo sul busto durante la locomozione
+- **texture dell'auto**: `map_body_cab3_02_BaseColor.png`, `map_glass_cab3_03_BaseColor.png`,
+  `map_wheel_cab3_01_BaseColor.png`, in `F:\Downloads\AM_cab3\SALE_textures\` sul suo PC
+  (alla v69 mai applicate; verificare nella v93)
+- contorno: `CONTORNO.spessore = 0.026`, verificare che i colpi facciano ancora danno ai bot
+- **licenza del modello**: da verificare prima di qualsiasi pubblicazione
+- correggere la riga del LEGGIMI che nomina il riferimento (vincolo 1)
+
+### Il prossimo passo logico
+
+**Il primo dato vero ce l'ha Lorenzo**: aprire la v98 con `?visualtest`, fare PROVA GRAFICA, salvare immagini
+PRIMA/DOPO dalle tre viste, salvare le misure, e registrare un video dell'accovacciamento
+in partita. Senza quelli si lavora alla cieca su luci e movimento.
+
+---
+
+## 10. L'ISOLA — ora è il terreno del gioco
+
+### 10.1 Da dove viene
+
+Nata come mappa esplorabile separata (con un visore: volo/camminata, minimappa,
+etichette, teletrasporto), poi fusa nel gioco. Nella v93 resta `const LUOGHI = []` col
+commento «elenco per il menu di teletrasporto del visore»: residuo del visore, da capire
+se il visore esiste ancora nel gioco o se è codice morto.
+
+Richiesta originale, testuale: «voglio una mappa più grande sempre con gli elementi che hai
+già. fai una sola città il resto sono casupole sparse. aggiungi laghi grotte. la mappa è
+un'isola in mezzo al acqua letteralmente. covi nascondigli segreti case sull albero un
+castello e easter egg. non voglio che banalizzi tutto. voglio comunque che dai dettagli.
+ricordati che comunque che siamo in un mondo cartoon stile [il riferimento].»
+
+**Poi ha fatto tagliare quasi tutti quei luoghi**, uno alla volta, guardandoli: grotte,
+castello con la scalinata, montagna del castello, cascata, palme, relitto, case
+sull'albero, papera gigante. Il motivo era sempre lo stesso — **fatti male, non
+sbagliati come idea**. Vedi 10.6.
+
+La mappa della partita ha anche un generatore a seme: la standard dà 33 case, i semi
+123456 e 999 ne danno 28 e 27 (test `maps.cjs`).
+
+### 10.2 Il terreno — l'ordine dei pezzi è la cosa importante
+
+Costanti: `MARE = 0`, `RAGGIO_ISOLA = 150`, `MAPPA = 440`,
+`CRESTA = {ax:98, az:-22, bx:132, bz:58, h:22}`, `CITTA = {x:6, z:18, y:3.0, r:52}`,
+`LAGHI`: Lago Grande (−86, 52, r 30, fondo −4,2), Lago Alto (62, −62, r 19, fondo −3,2),
+Laguna (24, 108, r 23, fondo −2,6). `PATHS`: sentieri che spianano e schiariscono il
+terreno e tengono libera la vegetazione.
+
+La forma nasce da pochi pezzi sovrapposti, **in quest'ordine, perché l'ordine conta**:
+
+1. colline (fbm)
+2. rilievo grosso (la cresta)
+3. conche scavate (città e laghi) — devono poter tagliare dentro i rilievi
+4. **discesa verso il mare, per ultima, che vince su tutto**
+
+Il castello aveva una terrazza che doveva vincere anche sulla costa; messa prima, la costa
+le mangiava un angolo di 16,3 m. Ora che il castello non c'è, **la costa è davvero l'ultima
+parola e non ci sono eccezioni**.
+
+Laghi e coste non sono cerchi: `raggioMosso(x, z, cx, cz, base, ampiezza, seme)` campiona
+un rumore sull'**angolo** (cos/sin), così il bordo si chiude senza cucitura visibile.
+Aggiunto dopo «i laghi sono troppo circolari».
+
+### 10.3 Le tre lezioni dell'isola (non ripeterle)
+
+**a) `this.box()` accorpa le geometrie, quindi niente materiali a colore per vertice.**
+Dentro `box()` vanno **solo materiali a tinta propria** (`MX.selciato`, `MX.selciato2`,
+`MX.sasso`, `MX.tronco`, `MX.telo`). `M.rock` e `M.trunk` usano `vertexColors` e sulla
+geometria accorpata rendono nero. Il commento sopra `const MX` nel codice lo ricorda.
+Il conteggio delle mesh che chiedono colori che non hanno **deve restare 0**.
+
+**b) L'alone bianco sopra la città erano le nuvole**, rimaste alla scala del vecchio mondo
+quadrato da 200: sprite bianchi fra la camera e i tetti. Spostate a 160-240 di quota su un
+raggio di 230-430; il sole a (520, 150, 300). **Se una macchia non sparisce togliendo gli
+oggetti sotto, non è lì.** (Il DOPO della v93 tocca cielo, sole e foschia: ricontrollare
+che le nuvole non siano tornate dentro l'isola.)
+
+**c) Una sola quota d'acqua: `MARE = 0`.** Il mare è un disco di raggio 343 sotto tutta
+l'isola; ovunque il terreno scende sotto zero si vede il mare. I vecchi dischi dei laghi a
+−1,1 creavano due acque sovrapposte. Tolti: i laghi sono specchi al livello del mare.
+Corollari: la riva del molo si **trova** (dal largo verso il centro, primo punto dove il
+terreno scende sotto il piano delle tavole) e il molo va verso il largo; i massi
+dell'isolotto si alzano col parametro `alza` di `rockAt`.
+
+### 10.4 Cosa c'era sull'isola alla mappa v6 (da ricontrollare nella v93)
+
+- **Città** (6, 18): vie in terra battuta dai `PATHS`, prato comune con albero grosso,
+  cinque bancarelle a teli colorati, pozzo, panchine, carro di fieno, lampioni, gazebo,
+  siepi, auto, cassonetti
+- **Casupole** sparse (86, 86 e dintorni): pozzo, catasta, orto, fuoco spento
+- **Bunker**, **Rifugio nella roccia**, **Accampamento** — i covi
+- **Tre laghi** (il grande con isolotto, canneti, molo a tavolato, barca di assi)
+- **Cresta rocciosa** a est
+- **Sei easter egg** sparsi, non segnalati
+
+Regola per barche e moli: **assi dritte, non superfici curve**. I mezzi cilindri si
+leggevano come botti.
+
+Nella partita ci sono anche le case generate (33 nella mappa standard), che nella mappa v6
+non c'erano: non è noto come convivano con città e casupole. Da guardare.
+
+### 10.5 Perché sono stati tolti (per non riproporli uguali)
+
+| cosa | difetto misurato o osservato |
+|---|---|
+| grotte | speroni a 4,2 di distanza ma grossi 3,2: si toccavano, un mucchio di sassi senza ingresso |
+| scalinata del castello | 46 gradini identici con muretto continuo: una scala mobile |
+| cascata | un velo trasparente senza shader resta un vetro piantato nel prato, in tre tentativi |
+| palme | sfere schiacciate su un palo: broccoli |
+| relitto | un cilindro marrone |
+| case sull'albero | chiome a sfera singola, riconoscibili come sfere da ogni angolo |
+| papera | tre palle e un cono; rifatta più dettagliata, tolta lo stesso |
+| montagna del castello | tolta di conseguenza: un cono da 42 m con una terrazza sopra il nulla |
+
+### 10.6 Punto aperto sull'isola
+
+**Il nord e l'ovest erano vuoti** dopo i tagli. Per un battle royale serve un motivo per
+andare in quella metà. A Lorenzo è stato chiesto se vuole altro (villaggio di pescatori
+sulla costa, rovine, miniera) o tenerla spoglia. **Non ha mai risposto.** Nella v93 le
+case generate potrebbero aver già riempito quella zona: verificare prima di chiedere di
+nuovo.
+
+---
+
+## 11. Storico versioni
+
+**Gioco (linea vecchia)**: v58 due livelli di dettaglio · v59 lobby ferma e set nuovo · v60
+illuminazione sul modello analitico · v61 caviglia corretta, supercampionamento,
+micromovimenti · v62-v69 contrazione di spigoli, normali per angolo, isole UV, luce al
+passaggio del mouse, cambio nome.
+
+**Mappa (separata, poi fusa)**: v1-v2 prima isola · v3 laghi meno circolari, modelli neri
+corretti · v4 pavimento della città e castello che fluttuava · v5 prato comune, luoghi
+rifatti · v6 luoghi rimossi, nuvole e sole spostati, quota dell'acqua unificata, molo a
+tavolato, barca ad assi, isolotto alzato.
+
+**v70-v92**: fatte in altre chat, **non documentate qui**. A un certo punto il nome diventa
+"Battlecraft" e l'isola entra nel gioco.
+
+**v93**: accovacciamento nuovo, prova grafica PRIMA/DOPO, test in Node con Three.js r160.
+
+**v94-v98**: fatte altrove; in questa chat è arrivata solo la v98 (sezione 9.1).
+
+**v99-v102**: sezione 9.2.
+
+**Prossima consegna: v103.**

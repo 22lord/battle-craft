@@ -1,0 +1,5 @@
+# index.html contiene righe base64 da milioni di caratteri: un diff testuale e' illeggibile
+# e pesantissimo. Git lo salva normalmente, ma non prova a mostrarne le differenze.
+index.html -diff
+*.mp3 binary
+test/lib/three.cjs -diff linguist-vendored
