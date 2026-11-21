@@ -4,6 +4,7 @@
   "private": true,
   "description": "Battle royale in terza persona con costruzioni, in un solo file HTML (Three.js r160).",
   "author": "Lorenzo Deda (@22lordd)",
+  "repository": "github:22lord/battle-craft",
   "scripts": {
     "test": "node test/run-all.cjs"
   }

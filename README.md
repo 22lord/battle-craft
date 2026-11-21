@@ -4,7 +4,7 @@ Battle royale in terza persona con costruzioni, nel browser. Isola cartoon, 30 g
 (tu + 29 bot), lancio dal bus col deltaplano, armi, raccolta materiali, costruzioni e zona
 che si stringe.
 
-Di **Lorenzo Deda** (@22lordd), Napoli.
+Di **Lorenzo Deda** (@22lordd), Napoli. Repo: [github.com/22lord/battle-craft](https://github.com/22lord/battle-craft).
 
 ## Come si gioca
 
