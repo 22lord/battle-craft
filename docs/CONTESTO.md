@@ -603,6 +603,10 @@ Strumenti che hanno mentito in questa sessione (aggiunti alla lista della sezion
   Da sapere: aperto dalla Home, il gioco ha un suo spazio dati separato da Safari
   (nome, statistiche e impostazioni ripartono da zero la prima volta), e la musica
   aspetta comunque il primo tocco.
+- **Niente più sottotitolo «Ultimo in piedi»** (dopo la v104, senza cambio di versione):
+  tolto dal `<title>`, dal logo del menu (il `<small>` sotto BATTLECRAFT) e dal README.
+  Anche i due testi di gioco che usavano la frase ora dicono «ultimo sopravvissuto»:
+  l'avviso a inizio partita e la schermata di vittoria. Solo testo, test non rilanciati.
 
 ### Cosa non è verificato (detto dal LEGGIMI stesso, e vero)
 

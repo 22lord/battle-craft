@@ -7890,7 +7890,7 @@ class Game {
     this.zone.reset(); this.cam.yaw = Math.atan2(-W.playerSpawn.x, -W.playerSpawn.z); this.cam.pitch = -0.1; this.cam.dist = CAMCFG.dist;
     this.time = 0; this.state = 'playing'; this.placement = 0; this.lobbyExposure(false); this.audio.musicaMenu(false);
     this.ui.title.classList.add('hidden'); this.ui.end.classList.add('hidden'); this.ui.pause.classList.add('hidden'); this.hud.show(true); this.hud.lastMode = ''; this.hud.refreshHotbar();
-    this.hud.toast('Resta nell\'area sicura. Ultimo in piedi vince!', true);
+    this.hud.toast('Resta nell\'area sicura. L\'ultimo sopravvissuto vince!', true);
     this.drop88.start();if(!this._skipLock102)this.requestLock();
   }
   pause(note) {
@@ -7920,7 +7920,7 @@ class Game {
   }
   endMatch() {
     this.state = 'ended'; const won = this.player.alive; const place = won ? 1 : this.placement; this.stats.matches++; if (place <= 3) { this.stats.top3++; this.stats.xp += 100; } if (won) this.stats.xp += 300; this.stats.xp += 25; this.saveStats(); this.refreshLobbyUI(); this.ui.endTitle.textContent = won ? 'Vittoria!' : 'Eliminato'; this.ui.endTitle.className = (won ? 'win' : 'lose') + ' x';
-    this.ui.endText.textContent = won ? `Sei l'ultimo in piedi. Eliminazioni: ${this.player.kills}.` : `Sei arrivato ${this.placement}° su ${this.chars.length}. Eliminazioni: ${this.player.kills}.`;
+    this.ui.endText.textContent = won ? `Sei l'ultimo sopravvissuto. Eliminazioni: ${this.player.kills}.` : `Sei arrivato ${this.placement}° su ${this.chars.length}. Eliminazioni: ${this.player.kills}.`;
     this.ui.end.classList.remove('hidden'); this.hud.show(false); this.edit.cancel(); this.input.clearMouse();
     if (document.pointerLockElement === this.canvas && document.exitPointerLock) document.exitPointerLock();
   }
