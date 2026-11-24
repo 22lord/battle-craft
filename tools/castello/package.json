@@ -1,0 +1,6 @@
+{
+  "name": "battlecraft-castello",
+  "private": true,
+  "description": "Converte il castello OBJ di Lorenzo nel GLB incorporato nel gioco (vedi README)",
+  "dependencies": { "meshoptimizer": "0.22.0", "sharp": "0.33.5" }
+}

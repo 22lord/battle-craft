@@ -21,6 +21,12 @@ const test = [
   ['villaggio.cjs', []],
   ['villaggio.cjs', ['123456']],
   ['scivolamento.cjs', ['check']],
+  ['castello.cjs', []],
+  ['castello.cjs', ['999']],
+  ['sovrapposizioni.cjs', ['90210', 'check']],
+  ['sovrapposizioni.cjs', ['999', 'check']],
+  ['sovrapposizioni.cjs', ['123456', 'check']],
+  ['piccone-costruzioni.cjs', []],
 ];
 
 let falliti = 0;

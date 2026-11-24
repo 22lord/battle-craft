@@ -5,7 +5,7 @@ const G={scene:new T.Scene(),physics:new A.Physics()};const W=new A.World(G);
 const casse=[],auto=[];const ob=W.box.bind(W);
 const caller=()=>new Error().stack.split('\n')[3]||'';
 W.box=function(mat,cx,cy,cz,sx,sy,sz,o){if(sx===1.1&&sy===1.1&&sz===1.1&&/casse/.test(caller()))casse.push([cx,cy,cz]);return ob(mat,cx,cy,cz,sx,sy,sz,o);};
-const oc=W.car.bind(W);W.car=function(x,z,r,m){const n=W.harvestables.length;oc(x,z,r,m);const h=W.harvestables[n];auto.push({x:h.x,z:h.z,r,orig:[x,z]});};
+const oc=W.car.bind(W);W.car=function(x,z,r,m){const n=W.harvestables.length;oc(x,z,r,m);const h=W.harvestables[n];if(h)auto.push({x:h.x,z:h.z,r,orig:[x,z]});/* v106: senza posto libero l auto non si piazza */};
 W.build();
 const r={};
 // 1. terreno dentro le case

@@ -4,11 +4,11 @@ Documento di passaggio di consegne. Serve a riprendere in una chat nuova senza r
 da zero e senza rifare errori già pagati.
 
 Autore: Lorenzo Deda (@22lordd), Napoli.
-Stato al 21 novembre 2026: **battlecraft v104**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
+Stato al 24 novembre 2026: **battlecraft v106**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
 **fusi**: l'isola della vecchia "mappa" è il terreno della partita.
 
-Versione del contesto: v6. Le v94-v97 non sono mai arrivate in chat:
-le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4.
+Versione del contesto: v7. Le v94-v97 non sono mai arrivate in chat:
+le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6.
 
 **Novità grossa della v103: il gioco adesso si può VEDERE renderizzato** (sezione 3.1), dal
 PC di Lorenzo, con la sua GPU. Molte frasi "non verificato a occhio" qui sotto si possono
@@ -49,7 +49,7 @@ ancora quella, ma adesso vive dentro il gioco.
    richiesta poggia su una diagnosi sbagliata, dirlo. Richiesta sua, testuale: «ogni volta
    che ti do sti comandi cerca di sviluppare un senso critico».
 4. **Ogni file consegnato va rinominato con un numero di versione progressivo**, mai lo
-   stesso nome due volte. La prossima è la **v105**. Nella repo il file si chiama `index.html` e la
+   stesso nome due volte. La prossima è la **v107**. Nella repo il file si chiama `index.html` e la
    versione sta in `VERSIONE`: le consegne fuori dalla repo restano `battlecraft-vNN.html`.
 5. Gli archivi del modello che ha fornito **non contengono licenza**: da verificare sul
    sito di origine prima di qualsiasi pubblicazione.
@@ -421,6 +421,29 @@ entro 5 mm dall'ancoraggio.
     `supportHeight` cade. Le piastrelle dei pavimenti sono allargate di 5 mm.
 17. **Python non c'è sul PC di Lorenzo** (solo l'alias del Microsoft Store). Node sì
     (v26). Script in Node o modifiche con Edit.
+18. **`npm i` in una sottocartella senza `package.json` risale alla radice della repo** e
+    aggiunge la dipendenza al `package.json` principale (successo con `tools/browser`).
+    `playwright-core` sta in `node_modules/` della radice (ignorato da git); gli script di
+    `tools/browser` lo trovano da li'. `tools/castello` ha il suo `package.json`.
+19. **Le patch all'HTML con heredoc della shell si rompono** sulle virgolette di template
+    del codice. Scrivere lo script di patch come file (Write) e lanciarlo con node; ogni
+    sostituzione controlla che il testo cercato compaia una volta sola.
+20. **Collisioni fatte di voxel: il controllo "sto in piedi qui" deve lasciare il gradino.**
+    Una prova di spazio libero che parte dai piedi tocca il gradino successivo della scala e
+    dice "bloccato": la testa libera va controllata da 0,75 m in su (il gradino massimo e' 0,7).
+21. **I muri del castello sono CAVI** (due pareti a ~4,5 m con l'intercapedine) e la faccia
+    esterna usa il materiale `flagstone`, lo stesso del selciato. Trattarlo come "pavimento"
+    (non solido, non distruttibile) rendeva il muro attraversabile per ~2 m e non rompibile.
+22. **Dividere una mesh in blocchi distruttibili: i triangoli grandi vanno TAGLIATI** sui piani
+    dei blocchi. Assegnati per baricentro, una faccia di muro alta 8 m restava intera in un
+    blocco solo. E le normali vanno calcolate prima di dividere, se no si vedono le cuciture.
+23. **Commenti `//` dentro funzioni scritte su una riga sola** (`hedge`, `addRock`, ...): una
+    patch che aggiunge `// v106` a meta' riga si mangia il resto della funzione. Usare `/* */`.
+24. **Nel banco di prova Node gli attributi Int16 normalizzati** vengono da un altro "realm" e
+    Three.js li rifiuta (`Invalid component type`). Il castello li converte in Float32 al caricamento.
+25. **Prima di dire "non si entra" provare il percorso giusto**: la torre nord-ovest sembrava
+    chiusa, invece erano le botti davanti a bloccare il mio percorso in diagonale. Camminare
+    lungo l'asse della porta (le colonne di legno si ricavano dal modello).
 
 ---
 
@@ -607,6 +630,120 @@ Strumenti che hanno mentito in questa sessione (aggiunti alla lista della sezion
   tolto dal `<title>`, dal logo del menu (il `<small>` sotto BATTLECRAFT) e dal README.
   Anche i due testi di gioco che usavano la frase ora dicono «ultimo sopravvissuto»:
   l'avviso a inizio partita e la schermata di vittoria. Solo testo, test non rilanciati.
+
+### 9.5 Cosa cambia nella v105
+
+Richiesta di Lorenzo, testuale: «ho aggiunto un castello nella cartella nel desktop vorrei
+che lo aggiungi alla mappa in maniera coerente col resto. quando miri da telefono o anche in
+generale la sensibilità è troppo bassa. voglio che da telefono raccogli gli oggetti
+toccandoli ed elimini il +. vorrei che il joystick per camminare a sinistra anche se tocco
+un poco piu sopra comunque capisce e si sposta».
+
+**Il castello** (`faiCastello105`, posizione e piazzola in `CASTELLO105_POS`):
+- il modello (`assets/castello/castello_cartoon_v3_obj.zip`, firmato @22lordd, stendardi «22»)
+  è un diorama: isoletta volante con prato, roccia sotto (fino a -29 m), pini, staccionate.
+  Nel gioco resta **solo il castello**: mura, 4 torri coi tetti blu, mastio a graticcio,
+  porta con ballatoio, cortile lastricato, scale ai camminamenti, bancarelle, pozzo, casse
+- conversione con `tools/castello/costruisci.cjs` (README accanto): 300k triangoli dopo il
+  filtro → **128k** con meshoptimizer, texture a 512/256 px senza normal map, colori di AO
+  per vertice tenuti. Scala **0,8** (mura 46 m, porta ~3,6 m). Ruotato di 180°: la porta
+  guarda -z. Dentro l'HTML: 2,9 MB di base64 (il file passa da 17,0 a ~19,9 MB)
+- posto: **la cresta est** (in alto a sinistra sulla minimappa), l'unica zona grande libera
+  da case, laghi e città (cercata con un programma, non a occhio). Piazzola piana a quota
+  24 che sfuma in 14 m: rocca in cima al crinale, fianchi ripidi. Il sentiero della cresta
+  ora prosegue fino alla porta. Segno sulla minimappa (`segnaCastello105`)
+- **collisioni**: scatole ricavate dai voxel del modello (0,35 m in pianta, 0,15 in
+  altezza: i piedi stanno al massimo 15 cm sopra la superficie vera), riempite dove chiuse,
+  fuse. 8.523 scatole, metà sono le torri tonde (a gradini nella griglia). Il costo
+  misurato dei raggi non cambia (lo domina il terreno). Indistruttibile
+- un `blocker` toglie case, alberi, cespugli e massi dall'area (prima c'erano massi nel
+  cortile e due case addosso alle mura, perché il sentiero nuovo spostava le casupole);
+  `nearHouse92` include il castello, quindi i bot non ci atterrano dentro
+- **bottino**: 5 oggetti nel cortile, 4 sui camminamenti a 6,6 m, scelti a griglia dove si
+  sta in piedi; tutti raggiungibili a piedi (verificato con una ricerca sulla griglia)
+- visto nei render: dalla città si legge la sagoma con le torri sulla cresta; lo stile
+  (pietre dipinte, tetti blu e rossi) sta bene col resto. Non visto: com'è giocarci dentro
+- test nuovo `castello.cjs` (semi 90210 e 999)
+
+**Comandi del telefono** (`TOUCH105`, tutte le regolazioni lì):
+- **sensibilità**: trascinare per guardare moltiplicava i pixel per 1,5 → ora **3** (un giro
+  completo da ~1900 a ~950 px di dito; misurato 76° per 200 px). In mira al telefono la
+  sensibilità scende a ×0,8 (era ×0,55), col mirino a ×0,45 (era ×0,25); il rallentamento
+  della mira assistita sopra un nemico da 0,55 a 0,72. Il cursore nelle impostazioni ora si
+  chiama «Sensibilità visuale», arriva a 3 ed è **salvato** (prima ripartiva da 1 a ogni
+  apertura). Il mouse è invariato salvo il cursore
+- **raccogliere toccando l'oggetto**: tocco breve (<320 ms, <14 px) ovunque sullo schermo;
+  si prende l'oggetto il cui punto sullo schermo è entro 70 px dal dito, fino a 3,4 m (il
+  tasto X arriva a 2,6); se è più lontano, «Avvicinati per raccoglierlo». Tolto il pulsante
+  «Raccogli» (quello con il **+**). Il suggerimento dice «Tocca per raccogliere: …»
+- **joystick mobile**: tutta la parte sinistra dello schermo (42%, sotto la fila di pulsanti
+  in alto) fa da joystick; il cerchio nasce dove appoggi il pollice e, se il dito esce dal
+  bordo, il centro lo segue
+- provato con `tools/browser/touch.cjs` (Edge, tocco emulato 844×390): joystick nato a
+  (170,120), avanti pieno, 5,5 m percorsi; oggetto raccolto col tocco. **Non provato su un
+  telefono vero.** Da chiedere a Lorenzo: se il «+» era davvero il pulsante Raccogli (l'ho
+  letto così) e se la sensibilità ora va bene
+
+### 9.6 Cosa cambia nella v106
+
+Richiesta di Lorenzo, testuale: «il castello è troppo in alto e su una collina innaturale. certi
+oggetti si possono trapassare e non dovrebbe essere così. ci sono ancora lampioni che collidono
+con le macchine e non va bene. sassi nelle case. risolvi tutti i problemi di questo tipo. in screen
+in quella posizioni di strutture non posso mettere una struttura in mezzo come il pavimento vorrei
+risolvere questa cosa. il piccone non fa danni. posso rompere le mura del castello come su fortnite
+o come le case che già ci sono. nelle torri non posso entrare». Screenshot: `screen/` (due muri
+paralleli, rampa in mezzo, giocatore sulla rampa).
+
+**Castello: posizione.** Stava a quota 24 su una piazzola che sfumava in 14 m: altopiano piatto con
+pareti a strapiombo (fino a 14 m sul lato del mare, visto nel render dall'alto). Ora
+`CASTELLO105_POS = {x:108, z:40, y:14}` (6 m piu' a ovest, lontano dalla spiaggia) e la collina la
+fa `terrainHeightNat102` (punto 3): il terreno sfuma verso la quota del castello in `COLLE106` = 38 m
+dal bordo delle mura, la cresta piu' alta scende a sella. La piazzola resta (blend 6) solo per il
+cortile piano.
+
+**Castello: torri.** Le porte ci sono nel modello (cortile e camminamento), ma coi voxel da 35 cm
+le collisioni a gradini lasciavano ~60 cm liberi sulla diagonale, il personaggio e' largo 76. Voxel
+a **20 cm** (prova a 15: nessun guadagno, piu' scatole). In piu' `costruisci.cjs` ricava dal modello
+le due colonne di legno di ogni porta e svuota il prisma fra di esse (nel modello e' vuoto,
+verificato). Test: si cammina lungo l'asse di tutte e 4 le porte.
+
+**Castello distruttibile.** `costruisci.cjs` divide il modello in blocchi da 4 m (origine -26 in
+pianta, fasce da 4 m sopra 30 cm): i triangoli si tagliano sui piani dei blocchi, i vertici di ogni
+blocco sono contigui in ogni mesh, le scatole di collisione non escono dal blocco. Nel gioco ogni
+blocco e' un pannello di pietra da `CASTELLO106_HP` = 150 (6 colpi di piccone), stesso meccanismo
+delle case (`removeHarvestable` azzera i vertici e toglie le scatole, `restoreHarvestables` al
+riavvio). Sotto 30 cm resta fisso (zoccolo, come le case). Le mura sono spesse: per aprire un varco
+servono **due blocchi** (parete esterna e interna), visto nel render. Materiali a due facce, se no
+nel taglio si vedrebbe attraverso. Niente crollo di cio' che sta sopra (come le case della mappa).
+Numeri: 362 blocchi, 22.778 scatole (erano 8.523), triangoli 128k -> ~197k per il taglio. Il GLB
+ha posizioni e uv a 16 bit e normali a 8 (base64 4,6 MB, era 2,9). Costo misurato in Node: un raggio
+da 90 m attraverso il castello 2,3 ms contro 1,8 (lo domina il terreno), moveCharacter 51 us contro 45.
+
+**Sovrapposizioni** (test nuovo `sovrapposizioni.cjs`, tre semi, confronta le scatole di
+collisione dopo `World.build`; i massi allargati alla misura vista). Trovati sul seme standard:
+lampione dentro un'auto (48,24), massi dell'accampamento dentro due casupole (78,91), panchine della
+piazza dentro due case della via (l'anello da 17 m le attraversa), siepe dentro il gazebo, auto sulle
+casse di una bancarella, masso su un lampione, alberi dentro le rocce. Ora tutti controllano prima
+di piazzarsi (`occupato106`): lampioni (si spostano fino a 3 m o saltano), panchine (si avvicinano al
+centro), auto (`liberaPorte102`: se non c'e' posto l'auto non c'e'; seme 123456: un'auto in meno),
+siepi, massi di rifugio e accampamento, piante e massi sparsi. Le casse dell'accampamento spostate.
+
+**Oggetti che si attraversavano** (tutti `collide:false`): bancarelle (pali, bancone), catasta di
+legna (fermava solo la fila di sotto, alta 60 cm: ci si saliva e si passava dentro il resto), molo del
+Lago Grande (tavole e passerella: ora si cammina, come i pontili), barche (una scatola sull'impronta,
+ci si sale), rete stesa (sei scatole sottili), facce esterne dei muri del castello (trappola 21).
+
+**Piccone sui personaggi.** Il raggio del piccone ignorava i personaggi: zero danni a bot e
+giocatori. Ora `PICCONE106`: 20 a colpo (30 in testa), portata 3 m (contro strutture resta 4,2).
+
+**Pavimento sopra la testa** (lo screenshot). Pavimento e tetto andavano sempre nella cella
+DAVANTI: fra due muri, sopra una rampa, non c'era modo di chiudere in mezzo. Ora mirando in alto
+(`BUILDCFG.suTesta106` = 0,45) vanno nella propria cella al primo livello sopra la testa. Test con
+due muri, rampa in mezzo, giocatore sulla rampa: pavimento messo in cima ai muri.
+
+Test nuovi: `sovrapposizioni.cjs` (3 semi), `piccone-costruzioni.cjs`; `castello.cjs` controlla
+anche torri e blocchi. Visto nei render: collina, torri, varco nel muro, molo. **Non visto giocando**:
+la sensazione del piccone sui bot, la mira "in alto" per il pavimento (soglia 0,45 da tarare con lui).
 
 ### Cosa non è verificato (detto dal LEGGIMI stesso, e vero)
 
@@ -796,4 +933,9 @@ espulsione sull'isola, scivolamento da accovacciati, primi render veri (sezione 
 
 **v104**: musica della lobby all'apertura, icona con Amy, Home di iPhone (sezione 9.4).
 
-**Prossima consegna: v105.**
+**v105**: il castello di Lorenzo sulla cresta est, comandi del telefono (sezione 9.5).
+
+**v106**: castello piu' basso, distruttibile, torri accessibili; sovrapposizioni e oggetti
+attraversabili; piccone sui personaggi; pavimento sopra la testa (sezione 9.6).
+
+**Prossima consegna: v107.**

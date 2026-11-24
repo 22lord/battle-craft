@@ -28,6 +28,8 @@ Poi:
   foschia (solo per capire la disposizione: nel gioco c'è). `js` è codice eseguito prima
   dello scatto con `G` (il gioco) e `v` (la vista): per esempio rompere un tetto
   (`G.world.removeHarvestable(...)`) e guardare dentro.
+- **telefono** (v105): `node tools/browser/touch.cjs <cartella-uscita>` emula un telefono in
+  orizzontale (844×390, tocco): joystick mobile, raccolta toccando, sensibilità del trascinamento.
 - **partita vera**: `node tools/browser/partita.cjs <cartella-uscita>` clicca Gioca e
   scatta durante il lancio (bus, caduta, deltaplano, atterraggio). Stampa stato,
   posizione ed errori della console.
@@ -40,4 +42,4 @@ Orientamento della minimappa: **alto = +z, sinistra = +x**.
   quelli del gioco vero.
 - Se gira un altro processo pesante (la suite di test) il browser rallenta e il tempo di
   gioco scorre lento: "Partenza tra 3" dopo 12 s non è un bug.
-- Non si sente l'audio e non si prova il telefono.
+- Non si sente l'audio. Il telefono è solo emulato (`touch.cjs`): niente dita vere, niente Safari.
