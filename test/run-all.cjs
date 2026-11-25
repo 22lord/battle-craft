@@ -36,6 +36,7 @@ const test = [
   ['cespugli109.cjs', ['999', 'check']],
   ['v110.cjs', []],
   ['v111.cjs', []],
+  ['v112.cjs', []],
 ];
 
 let falliti = 0;

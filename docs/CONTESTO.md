@@ -4,15 +4,15 @@ Documento di passaggio di consegne. Serve a riprendere in una chat nuova senza r
 da zero e senza rifare errori già pagati.
 
 Autore: Lorenzo Deda (@22lordd), Napoli.
-Stato al 25 novembre 2026: **battlecraft v111**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
+Stato al 26 novembre 2026: **battlecraft v112**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
 **fusi**: l'isola della vecchia "mappa" è il terreno della partita.
 
-Versione del contesto: v10. Le v94-v97 non sono mai arrivate in chat:
-le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8, v109 in 9.9, v110 in 9.10, v111 in 9.11.
+Versione del contesto: v11. Le v94-v97 non sono mai arrivate in chat:
+le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8, v109 in 9.9, v110 in 9.10, v111 in 9.11, v112 in 9.12.
 
 **Dalla v110 la grafica procede a fasi** (prompt in `docs/PROMPT-GRAFICA.md`, una fase per sessione, piano
-prima e ok di Lorenzo). Fatta: **fase 1 (luce, cielo, post-processing)**. Prossima: **fase 2 (materiali e
-texture)**. Ogni fase rifà le 6 inquadrature fisse con `tools/browser/fase.cjs` (sezione 9.10).
+prima e ok di Lorenzo). Fatte: **fase 1 (luce, cielo, post-processing)** e **fase 2 (materiali e texture,
+v112)**. Prossima: **fase 3 (geometria e dettagli del mondo)**. Ogni fase rifà le 6 inquadrature fisse con `tools/browser/fase.cjs` (sezione 9.10).
 
 **Novità grossa della v103: il gioco adesso si può VEDERE renderizzato** (sezione 3.1), dal
 PC di Lorenzo, con la sua GPU. Molte frasi "non verificato a occhio" qui sotto si possono
@@ -53,7 +53,7 @@ ancora quella, ma adesso vive dentro il gioco.
    richiesta poggia su una diagnosi sbagliata, dirlo. Richiesta sua, testuale: «ogni volta
    che ti do sti comandi cerca di sviluppare un senso critico».
 4. **Ogni file consegnato va rinominato con un numero di versione progressivo**, mai lo
-   stesso nome due volte. La prossima è la **v112**. Nella repo il file si chiama `index.html` e la
+   stesso nome due volte. La prossima è la **v113**. Nella repo il file si chiama `index.html` e la
    versione sta in `VERSIONE`: le consegne fuori dalla repo restano `battlecraft-vNN.html`.
 5. Gli archivi del modello che ha fornito **non contengono licenza**: da verificare sul
    sito di origine prima di qualsiasi pubblicazione.
@@ -274,6 +274,8 @@ test/villaggio.cjs [SEME]   v103: case all'asciutto, pontili calpestabili, faro,
 test/scivolamento.cjs check v103: piede in appoggio fermo, accovacciati, velocita' vere
 tools/browser/              v103: render veri con Edge (non sono test: vedi README)
 test/v110.cjs               v110: curva, nebbia, livelli di qualità, ciclo del giorno, modello analitico, F3, mappa non spostata
+test/v111.cjs               v111: sparo automatico, finestra del nome, scritta della versione
+test/v112.cjs               v112: tappi del castello (spenti, si accendono rompendo, si rispengono), UV nel mondo, ripiego senza GPU
 ```
 
 Strumenti della v110 (in `tools/`, non sono test):
@@ -287,6 +289,10 @@ tools/browser/costi110.cjs [w h] [url]                 ms GPU veri (query del ti
 tools/browser/f3110.cjs <out>                          prova del pannello F3 e dei suoi interruttori
 tools/luce110.cjs                                      modello analitico delle luci (sezione 3)
 tools/patch110/                                        la patch della v110 (blocco.js, cielo.js, applica.cjs)
+tools/patch112/                                        la patch della v112 (materiali.js, tappi.js, applica.cjs)
+tools/browser/texture112.cjs <out.png>                 foglio delle texture generate (colore | normal | rugosità) e ms di generazione
+tools/browser/cuciture112.cjs <cartella> [url] [vista] diagnosi di linee sul castello: normale / senza ombre / magenta senza luci / colore per blocco
+tools/browser/esegui.cjs <script.js> [url]             esegue uno script nella pagina col gioco caricato (riceve G) e stampa il risultato
 ```
 
 Tempi: ~10 minuti in tutto sul banco di prova del cloud.
@@ -509,6 +515,17 @@ entro 5 mm dall'ancoraggio.
     subito dopo il clic, non è il costo dell'effetto. Misurare dopo qualche secondo.
 39. **ACES desatura le luci forti**: la pelle in pieno sole a mezzogiorno arriva a 238 su 255 quasi grigia (albedo
     della texture già 0,70). Abbassare il sole cambia pochi punti (calcolato); è da fase 5 (pelle), non da luci.
+40. **"Linee" sul castello: prima di dare la colpa alle ombre, guardarlo senza luci su fondo magenta**
+    (`cuciture112.cjs`). Se le linee restano e non diventano magenta sono geometria, non buchi né ombre. Erano i tappi
+    dei muri cavi (v107/v109): nascono dai voxel da 20 cm e sporgono dalla parete; col muro intero si vedevano di taglio.
+41. **`RenderChunks78` stacca dalla scena i blocchi lontani**: una `scene.traverse` non li vede. Chi cambia materiali (o
+    altro) su tutte le mesh deve passare anche da `world.chunks.cells[*].root` (lo fa `scambia112`).
+42. **Uno shader di generazione unico con tutti i materiali e il materiale ricalcolato 13 volte per pixel = 23 s di
+    caricamento** (compilazione D3D compresa). Un programma per materiale (`#define TIPO`) e l'altezza calcolata una volta
+    in una texture HalfFloat: 1,6 s.
+43. **Testo e patch passati alla shell dentro `node -e "..."`**: gli escape `\n` diventano a capo veri (la stringa JS si
+    rompe, successo due volte con `applica.cjs`) e i backtick vengono ESEGUITI come comandi (successo scrivendo proprio
+    questa trappola: sparivano i nomi fra backtick). Patch e documenti si scrivono con Write/Edit, come dice la 19.
 
 ---
 
@@ -1123,6 +1140,57 @@ e sul pg allora spara in automatico». Fuori dalle fasi grafiche (la fase 2 slit
 - **Non provato**: telefono vero; come si sente in partita (tempi di reazione, se dà fastidio quando si vuole solo
   guardare un nemico).
 
+### 9.12 Cosa cambia nella v112 — fase grafica 2: materiali e texture (+ "divisioni" del castello)
+
+Richiesta: la fase 2 di `PROMPT-GRAFICA.md`, più un prompt "materiali stilizzati" di Lorenzo (colori saturi, normal
+solo a forme grandi, metallo opaco con spigoli lucidi, pelle/tessuti/cuoio, 2K/4K). Al piano ha risposto, testuale:
+«no il castello non lo eliminare ma vorrei non si vedessero le divisioni». Quindi: castello con le SUE texture, e via le
+linee. Detto a Lorenzo prima di farlo: pelle, tessuti, cuoio e armature sono fase 5 (il modello ha solo il colore,
+trappola 10); 2K/4K su UHD con texture generate al caricamento non conviene (colore 1024, normal/rugosità 512).
+Patch riproducibile: `git checkout index.html VERSIONE && node tools/patch112/applica.cjs` (sorgenti in `tools/patch112/`).
+
+- **Le "divisioni" del castello erano i tappi** (v107/v109) dei muri cavi sui confini dei blocchi da 4 m: ~11.400
+  triangoli che sporgono dalla parete (voxel da 20 cm), visti di taglio come linee dritte. Diagnosi con
+  `cuciture112.cjs` (trappola 40). Ora `World.tappi112` li trova (triangoli del materiale di pietra stesi su un piano di
+  confine, normale esatta sull'asse), li rende degeneri **nell'indice** e `removeHarvestable` accende solo quelli che
+  guardano il blocco rotto (`mostraTappi112`); `restoreHarvestables` li rispegne. Le posizioni restano quelle di prima.
+  Visto nel render: muro pulito, blocco rotto chiuso dai tappi dei vicini.
+- **Texture generate sulla GPU** (`MAT112`, `genMat112`): 9 materiali (conci, lastricato, pietra grezza, tavole,
+  mattoni, tegole, lamiera ondulata con ruggine, perlinato, zolle). Per ognuno: passata d'altezza (HalfFloat), poi colore
+  con occlusione e curvatura dipinte (incavi caldi mai sotto il 62%, spigoli più chiari, finta luce dall'alto), normal,
+  ORM (rugosità in G, metallo in B). `readPixels` → `DataTexture` con mipmap e anisotropia 8. **1,1-1,6 s** alla prima
+  Media/Alta sulla UHD (+0,1 s per il castello). Foglio delle texture: `tools/browser/texture112.cjs`.
+- **Densità fissa e UV nel mondo** (`uvMondo112` in `World.batch`): sulle scatole una ripetizione ogni `MAT112.lato` m
+  (2 m; mattoni 1,6; pietra grezza 3; zolle 2,5), proiezione per faccia. Vale anche in Bassa (texture vecchie con la
+  stessa densità; costo zero al fotogramma). Prima ogni faccia aveva la texture intera, stirata o schiacciata.
+- **Due insiemi di materiali** (`scambia112`): Bassa = quelli della v111; Media/Alta = `MeshStandardMaterial` con normal
+  e rugosità (terreno e rocce restano Lambert). Lo scambio passa anche dai blocchi della mappa staccati (trappola 41).
+  F3 ha l'interruttore **Materiali** (v112/vecchi).
+- **Shader comuni** (`inietta112`): variazione di tinta a bassa frequenza nel mondo (spezza la ripetizione), **sporco
+  alla base dei muri** (mappa d'altezza presa dalla mesh vera del terreno, 181×181), **triplanare** su rocce e scogliere
+  (pietra grezza, whiteout), **schiuma sulle rive** (profondità dal terreno, fascia fissa + onde che si muovono).
+- **Castello**: normal e rugosità ricavate dal disegno di Lorenzo (la malta scura diventa un solco), il colore resta il
+  suo. Niente triplanare sul castello: le sue pietre poligonali con la malta scura, mescolate fra due proiezioni,
+  farebbero doppie righe sulle torri.
+
+Valori dei materiali (normalScale in `MAT112.normale`): conci 1,0 · lastricato 1,0 · grezza 1,2 · legno 0,9 · mattoni
+1,0 · tegole 1,0 · lamiera 0,8 (metallo 0,35, creste 0,85, ruggine 0) · perlinato 0,9 · zolle 0,55 · castello 0,9.
+Rugosità dipinta nella mappa: pietre 0,8-0,95, legno 0,7-0,95, lamiera 0,28-0,42 (ruggine 0,92), spigoli -0,25.
+
+**Costi misurati** (`costi110.cjs`, piazza del castello, mezzogiorno, 1920×1080, GPU vera): Media 13,0 → **14,8 ms**,
+Alta 14,4 → **16,2 ms** (+1,8 ms, quasi tutto lo `MeshStandardMaterial` con normal al posto del Lambert). Bassa
+invariata (materiali v111; verificato: 0 materiali nuovi in scena in Bassa, 417 in Media).
+
+**Render**: `screen/render/fase-2/prima/` (v111), `dopo/`, `confronto/` (prima | dopo), `extra/citta.png` (città
+v111 | v112: lì il salto è più evidente, i muri sfocati diventano conci nitidi), `texture.png`, `diagnosi*/`.
+
+**Non verificato / aperto**: FPS giocando (F3) e il telefono (Bassa non cambia, quindi dovrebbe restare uguale); come si
+legge in movimento la schiuma (in un'immagine ferma è una fascia bianca abbastanza larga sulle spiagge piatte); le zolle
+del terreno si vedono poco (la normal sul Lambert a 0,55 è sottile: alzabile da `MAT112.normale.zolle`); le texture si
+generano **la prima volta che la qualità è Media/Alta** (in `scambia112`, chiamato da `setQuality`): il telefono parte in
+Bassa e non le genera mai, sul PC si pagano 1,6 s alla prima `setQuality('med')` (all'avvio). La lobby non usa questi
+materiali.
+
 ### Cosa non è verificato (detto dal LEGGIMI stesso, e vero)
 
 - **nessuno ha visto la v93 renderizzata** tranne, eventualmente, Lorenzo
@@ -1331,4 +1399,8 @@ sole e nuvole nuove, nebbia d'altezza, post-processing in Media/Alta (AO, bloom,
 **v111**: nome chiesto alla prima apertura, sparo automatico (opzione), scritta della versione in lobby
 (sezione 9.11).
 
-**Prossima consegna: v112** (fase grafica 2: materiali e texture).
+**v112**: fase grafica 2 — texture nuove generate sulla GPU (9 materiali con normal e rugosità), UV nel mondo,
+triplanare sulle rocce, sporco alla base dei muri, schiuma sulle rive, normal del castello dal suo disegno; tappi del
+castello spenti finché non serve (spariscono le "divisioni" sui muri) (sezione 9.12).
+
+**Prossima consegna: v113** (fase grafica 3: geometria e dettagli del mondo).
