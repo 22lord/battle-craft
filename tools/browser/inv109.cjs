@@ -6,7 +6,7 @@
 const { chromium } = require('playwright-core'); const path = require('path');
 const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 async function partita(browser, opz) {
-  const ctx = await browser.newContext(opz); const page = await ctx.newPage(); const errs = [];
+  const ctx = await browser.newContext(opz); const page = await ctx.newPage(); await page.addInitScript(() => { try { localStorage.setItem('battlecraft_benvenuto111', '1'); } catch (e) { } }); /* v111: niente finestra del nome */ const errs = [];
   page.on('pageerror', (e) => errs.push('PAGEERROR ' + e.message));
   await page.goto('http://localhost:8123/index.html', { timeout: 180000 });
   await page.waitForFunction(() => window.__game && window.__game.world, null, { timeout: 180000 });

@@ -4,11 +4,11 @@ Documento di passaggio di consegne. Serve a riprendere in una chat nuova senza r
 da zero e senza rifare errori già pagati.
 
 Autore: Lorenzo Deda (@22lordd), Napoli.
-Stato al 25 novembre 2026: **battlecraft v110**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
+Stato al 25 novembre 2026: **battlecraft v111**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
 **fusi**: l'isola della vecchia "mappa" è il terreno della partita.
 
 Versione del contesto: v10. Le v94-v97 non sono mai arrivate in chat:
-le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8, v109 in 9.9, v110 in 9.10.
+le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8, v109 in 9.9, v110 in 9.10, v111 in 9.11.
 
 **Dalla v110 la grafica procede a fasi** (prompt in `docs/PROMPT-GRAFICA.md`, una fase per sessione, piano
 prima e ok di Lorenzo). Fatta: **fase 1 (luce, cielo, post-processing)**. Prossima: **fase 2 (materiali e
@@ -53,7 +53,7 @@ ancora quella, ma adesso vive dentro il gioco.
    richiesta poggia su una diagnosi sbagliata, dirlo. Richiesta sua, testuale: «ogni volta
    che ti do sti comandi cerca di sviluppare un senso critico».
 4. **Ogni file consegnato va rinominato con un numero di versione progressivo**, mai lo
-   stesso nome due volte. La prossima è la **v111**. Nella repo il file si chiama `index.html` e la
+   stesso nome due volte. La prossima è la **v112**. Nella repo il file si chiama `index.html` e la
    versione sta in `VERSIONE`: le consegne fuori dalla repo restano `battlecraft-vNN.html`.
 5. Gli archivi del modello che ha fornito **non contengono licenza**: da verificare sul
    sito di origine prima di qualsiasi pubblicazione.
@@ -1094,6 +1094,35 @@ mezzogiorno la sabbia è chiara (texture: fase 2); la pelle a mezzogiorno è qua
 solo sul PC), come si sente un giro di 12 minuti in partita (forse troppo veloce/lento: `GIORNO110.durata`),
 il caricamento di SMAA dalla CDN (in headless si carica: i programmi salgono di 3), la notte vista in movimento.
 
+### 9.11 Cosa cambia nella v111 — nome alla prima apertura, sparo automatico
+
+Richiesta di Lorenzo, testuale: «fa che a inizio gioco ti chieda il nome e poi lo memorizza per ogni volta che lo
+apri e aggiungi anche la possibilità all inizio di sparo automatico. cioè nel senso che quando miri e il puntatore
+e sul pg allora spara in automatico». Fuori dalle fasi grafiche (la fase 2 slitta alla v112). Patch:
+`tools/patch111/applica.cjs` (parte dalla v110 del repo).
+
+- **Nome**: si salvava già (`baia_nome`, campo in Impostazioni dalla v62-69), ma nessuno lo chiedeva. Ora
+  `benvenuto111` mostra una finestra quando sparisce il caricamento, **una volta per dispositivo**
+  (`battlecraft_benvenuto111`), col nome già scritto se ce n'era uno (non il predefinito «22lordd»). I tasti scritti
+  nel campo non arrivano al gioco (`stopPropagation`). Campo a 16 px (niente zoom su iPhone).
+- **Sparo automatico** (`SPARO111`, `Game.mirinoSuNemico111`, `impostaSparo111`): opzione nella finestra e in
+  Impostazioni (casella `sparoSel111`), **spenta di serie**, salvata in `battlecraft_sparoauto111`. Col mirino su un
+  avversario vivo, senza muri in mezzo (stesso raggio dello sparo, dalla telecamera) ed entro la portata dell'arma,
+  l'arma spara da sola al suo ritmo, anche quelle a colpo singolo (cecchino: cadenza + ricarica). Non col piccone, non
+  in costruzione/modifica, non in volo. Il grilletto vero non resta bloccato (`firedPress` lo tocca solo il clic).
+  **Interpretazione mia** di "quando miri": basta il mirino sopra, senza tenere il tasto destro;
+  `SPARO111.soloInMira = true` lo limita alla mira. Costo: test geometrico sui personaggi (distanza dalla linea del
+  mirino < 1 m), il raggio vero solo se qualcuno è vicino, al massimo ogni 0,05 s. Solo il giocatore: i bot no.
+  Detto a Lorenzo: sul PC è di fatto un "triggerbot", rende i bot molto più facili.
+- **Scritta della versione in lobby** (`#ver`, in basso a sinistra): era ferma alla **v104**. Ora v111 e il test la
+  confronta con `VERSIONE`: alla prossima versione va aggiornata anche lei (se no il test fallisce).
+- Test nuovo `v111.cjs` (18 controlli: mirino sul bot/a lato/dietro un muro/oltre la portata, opzione spenta,
+  cecchino al suo ritmo, piccone, costruzione, salvataggio, finestra, versione). Strumento
+  `tools/browser/benvenuto111.cjs`: profilo nuovo → finestra, nome, ricaricamento → ricordato; in partita 12 colpi
+  da soli in 1,5 s con l'opzione, 0 senza; finestra su telefono emulato (iPhone 13 orizzontale): ci sta.
+- **Non provato**: telefono vero; come si sente in partita (tempi di reazione, se dà fastidio quando si vuole solo
+  guardare un nemico).
+
 ### Cosa non è verificato (detto dal LEGGIMI stesso, e vero)
 
 - **nessuno ha visto la v93 renderizzata** tranne, eventualmente, Lorenzo
@@ -1299,4 +1328,7 @@ senza tetto, bus audio delle armi, tappi del castello senza fessure, cespugli a 
 **v110**: fase grafica 1 — curva ACES + grading, ciclo del giorno continuo (12 min, notte chiara), cielo col
 sole e nuvole nuove, nebbia d'altezza, post-processing in Media/Alta (AO, bloom, FXAA), F3 con ms GPU (sezione 9.10).
 
-**Prossima consegna: v111** (fase grafica 2: materiali e texture).
+**v111**: nome chiesto alla prima apertura, sparo automatico (opzione), scritta della versione in lobby
+(sezione 9.11).
+
+**Prossima consegna: v112** (fase grafica 2: materiali e texture).

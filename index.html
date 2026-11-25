@@ -434,7 +434,7 @@ window.loadingSlow91=setTimeout(function(){if(document.getElementById('loading91
 <div id="title">
   <div class="topbar">
     <div class="logo x">BATTLECRAFT</div>
-  <div id="ver">v104</div>
+  <div id="ver">v111</div>
     <div class="tabs" id="tabs"><button data-tab="play" class="on">Gioca</button><button data-tab="locker">Armadietto</button><button data-tab="controls">Comandi</button><button data-tab="settings">Impostazioni</button></div>
     <div class="profile"><div class="av" id="profAv">22</div><div><span id="profName" title="Clicca per cambiare nome">@22lordd</span><small id="profLv">LIVELLO 1</small></div></div>
   </div>
@@ -466,8 +466,10 @@ window.loadingSlow91=setTimeout(function(){if(document.getElementById('loading91
     <div class="row">Nome giocatore <input id="nameSel" type="text" maxlength="16" spellcheck="false" autocomplete="off" placeholder="22lordd"></div>
     <div class="row">Musica del menu <input id="musSel" type="range" min="0" max="1" step="0.05" value="0.45"></div>
     <div class="row">Volume armi <input id="armiSel109" type="range" min="0" max="1" step="0.05" value="0.7"></div>
+    <div class="row">Sparo automatico <input id="sparoSel111" type="checkbox"></div>
     <div class="row">Bravura dei bot <select id="diffSel"><option value="facile" selected>Facile</option><option value="normale">Normale</option><option value="tosto">Tosto</option></select></div>
     <p class="note">Bassa disattiva le ombre; Alta usa ombre più definite e risoluzione piena.</p>
+    <p class="note">Sparo automatico: quando il mirino è su un avversario (senza muri in mezzo e entro la portata dell'arma) l'arma spara da sola, al suo ritmo.</p>
     <p class="note">A Facile i bot ti vedono da meno lontano, reagiscono più lenti, mirano peggio e fanno circa metà danno.</p>
   </div>
   <div class="card hidden" id="lockerBox">
@@ -8298,6 +8300,38 @@ class Perf110 {
   }
 }
 
+/* ============================================================
+   v111 — SPARO AUTOMATICO e NOME ALLA PRIMA APERTURA
+   Sparo automatico (opzione, spenta di serie, salvata in battlecraft_sparoauto111): se il mirino e'
+   su un avversario vivo, senza muri in mezzo ed entro la portata dell'arma, l'arma spara da sola al
+   suo ritmo (anche le armi a colpo singolo). Col piccone no. soloInMira = true lo limiterebbe a quando
+   si tiene la mira (tasto destro / LT). Il controllo costa poco: prima un test geometrico sui
+   personaggi (distanza dalla linea del mirino); il raggio vero (lo stesso dello sparo) parte solo se
+   qualcuno e' vicino alla linea, al massimo ogni "intervallo" secondi.
+   ============================================================ */
+const SPARO111 = { soloInMira: false, intervallo: 0.05, largo: 1.0 };
+/* Finestra di benvenuto: una volta per dispositivo (battlecraft_benvenuto111), col nome gia' scritto se
+   c'era. Dopo il nome resta salvato (baia_nome, come prima) e si cambia da Impostazioni. */
+function benvenuto111(G) {
+  if (lsGet103('battlecraft_benvenuto111') === '1' || document.getElementById('benvenuto111')) return;
+  const ov = document.createElement('div'); ov.id = 'benvenuto111';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(6,12,28,.72);font-family:inherit';
+  ov.innerHTML = '<div style="background:#14213d;border:2px solid rgba(255,255,255,.18);border-radius:14px;padding:22px 24px;width:min(360px,calc(100vw - 32px));color:#fff;box-shadow:0 12px 40px rgba(0,0,0,.5)">'
+    + '<div style="font-size:22px;font-weight:800;margin-bottom:4px">Benvenuto!</div>'
+    + '<div style="opacity:.8;margin-bottom:14px">Come ti chiami? Il nome resta salvato: lo cambi quando vuoi da Impostazioni.</div>'
+    + '<input id="benvNome111" type="text" maxlength="16" spellcheck="false" autocomplete="off" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px 12px;border-radius:8px;border:1px solid #567;background:#0d1730;color:#fff">'
+    + '<label style="display:flex;gap:10px;align-items:flex-start;margin:14px 0 18px;cursor:pointer"><input id="benvSparo111" type="checkbox" style="width:20px;height:20px;margin-top:2px"><span><b>Sparo automatico</b><br><span style="opacity:.75;font-size:13px">L\'arma spara da sola quando il mirino è su un avversario.</span></span></label>'
+    + '<button id="benvOk111" type="button" style="width:100%;font-size:17px;font-weight:800;padding:11px;border-radius:9px;border:0;background:#ffd23f;color:#1a1a1a;cursor:pointer">Inizia</button></div>';
+  document.body.appendChild(ov);
+  const nome = document.getElementById('benvNome111'), sp = document.getElementById('benvSparo111');
+  nome.value = G.playerName && G.playerName !== '22lordd' ? G.playerName : ''; nome.placeholder = 'Il tuo nome'; sp.checked = !!G.sparoAuto111;
+  const ok = () => { G.applicaNome(nome.value.trim() || G.playerName); G.impostaSparo111(sp.checked); try { localStorage.setItem('battlecraft_benvenuto111', '1'); } catch (e) { } ov.remove(); };
+  nome.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') ok(); });
+  ov.addEventListener('pointerdown', (e) => e.stopPropagation()); ov.addEventListener('keydown', (e) => e.stopPropagation());
+  document.getElementById('benvOk111').addEventListener('click', ok);
+  setTimeout(() => { try { nome.focus(); } catch (e) { } }, 50);
+}
+
 class Game {
   constructor() {
     this.canvas = document.getElementById('game');this.resolution94='auto';try{this.resolution94=localStorage.getItem('battlecraft_resolution94')||this.resolution94;}catch(e){}if(!['auto','1080','1440','4k'].includes(this.resolution94))this.resolution94='auto'; this.time = 0; this.state = 'title'; this.quality = 'med'; this.locked = false; this.noLock = false; this.jumpBuf = 0; this.firedPress = false; this.endTimer = -1; this.zoneTickT = 0; this.placement = 0;
@@ -8489,6 +8523,26 @@ class Game {
     if (this.player) this.player.name = this.playerName;
     this.saveStats();
   }
+  impostaSparo111(on) {
+    this.sparoAuto111 = !!on; try { localStorage.setItem('battlecraft_sparoauto111', on ? '1' : '0'); } catch (e) { }
+    const el = document.getElementById('sparoSel111'); if (el) el.checked = this.sparoAuto111;
+  }
+  /* true se il mirino (raggio della telecamera, lo stesso dello sparo) prende un avversario vivo prima di
+     qualsiasi muro, entro la portata dell'arma. Risultato tenuto per SPARO111.intervallo secondi. */
+  mirinoSuNemico111(p, dt) {
+    this._sparoT111 = (this._sparoT111 || 0) - dt; if (this._sparoT111 > 0) return !!this._sparoOk111;
+    this._sparoT111 = SPARO111.intervallo; this._sparoOk111 = false;
+    const w = WEAPONS[p.weapon]; if (!w) return false; const o = this.cam.pos, d = this.cam.dir, L = SPARO111.largo; let vicino = false;
+    for (const c of this.chars) {
+      if (c === p || !c.alive || c.air88) continue;
+      const vx = c.pos.x - o.x, vy = c.pos.y + 0.9 - o.y, vz = c.pos.z - o.z, t = vx * d.x + vy * d.y + vz * d.z;
+      if (t <= 0 || t > w.range + 1) continue;
+      const px = vx - d.x * t, py = vy - d.y * t, pz = vz - d.z * t; if (px * px + py * py + pz * pz < L * L) { vicino = true; break; }
+    }
+    if (!vicino) return false;
+    const r = this.physics.raycast(o, d, w.range, { chars: true, ignore: p });
+    this._sparoOk111 = !!(r.hit && r.char && r.char !== p && r.char.alive); return this._sparoOk111;
+  }
   saveStats() { try { localStorage.setItem('baia_stats', JSON.stringify(this.stats)); localStorage.setItem('baia_outfit', String(this.outfit)); localStorage.setItem('baia_musica', String(this.musVol)); localStorage.setItem('baia_armi109', String(this.audio.armiVol)); localStorage.setItem('baia_nome', this.playerName); } catch (e) { } }
   /* --- pannello di riassegnazione tasti --- */
   buildKeymapUI() {
@@ -8669,6 +8723,7 @@ class Game {
     for (const b of document.querySelectorAll('#tabs button')) b.addEventListener('click', () => { this.setTab(b.dataset.tab); this.audio.init(); this.audio.click(); });
     $('lockPrev').addEventListener('click', () => { this.outfit = 0; this.setLobbyPlayer(); this.refreshLobbyUI(); this.saveStats(); });
     $('lockNext').addEventListener('click', () => { this.outfit = 0; this.setLobbyPlayer(); this.refreshLobbyUI(); this.saveStats(); });
+    { this.sparoAuto111 = lsGet103('battlecraft_sparoauto111') === '1'; const sa = $('sparoSel111'); if (sa) { sa.checked = this.sparoAuto111; sa.addEventListener('change', (e) => this.impostaSparo111(e.target.checked)); } }   // v111
     { const sv = +lsGet103('bc_sens105'); if (sv >= 0.4 && sv <= 3) { this.sens = sv; $('sensSel').value = String(sv); } }
     $('sensSel').addEventListener('input', (e) => { this.sens = +e.target.value; try { localStorage.setItem('bc_sens105', String(this.sens)); } catch (er) {} });
     const ns = $('nameSel');
@@ -8947,9 +9002,11 @@ class Game {
       if (this.jumpBuf > 0) this.jumpBuf -= dt; const jump = this.jumpBuf > 0 && p.onGround; if (jump) this.jumpBuf = 0;
       if(!p.air88)applyMovement(this, p, wx, wz, run, jump, dt);
       // fuoco
-      if (!p.air88 && p.mode === 'weapon' && p.weapon && (inp.mouseL||inp.padFire88) && !this.edit.active) {
+      // v111: sparo automatico (opzione): nessun grilletto premuto, mirino su un avversario
+      const auto111 = !!this.sparoAuto111 && !p.air88 && p.mode === 'weapon' && !!p.weapon && !this.edit.active && !(this.build && this.build.active) && !(inp.mouseL || inp.padFire88) && (!SPARO111.soloInMira || p.ads) && this.mirinoSuNemico111(p, dt);
+      if (!p.air88 && p.mode === 'weapon' && p.weapon && (inp.mouseL||inp.padFire88||auto111) && !this.edit.active) {
         const w = WEAPONS[p.weapon];
-        if (w.auto || !this.firedPress) { const before = p.fireCd; if (this.combat.tryFire(p, this.cam.pos, this.cam.dir)) { this.firedPress = true; this.cam.pitch += w.recoil * DEG * (p.ads ? 0.6 : 1); this.cam.yaw += rnd(-0.35, 0.35) * w.recoil * DEG; } else if (!w.auto && before <= 0) this.firedPress = true; }
+        if (w.auto || auto111 || !this.firedPress) { const before = p.fireCd; if (this.combat.tryFire(p, this.cam.pos, this.cam.dir)) { if (!auto111) this.firedPress = true; this.cam.pitch += w.recoil * DEG * (p.ads ? 0.6 : 1); this.cam.yaw += rnd(-0.35, 0.35) * w.recoil * DEG; } else if (!w.auto && !auto111 && before <= 0) this.firedPress = true; }
       }
       if (!inp.mouseL&&!inp.padFire88) this.firedPress = false;
     }
@@ -9170,6 +9227,7 @@ async function boot() {
   window.__game.renderer.render(window.__game.lobbyScene,window.__game.lobbyCam);
   document.getElementById('loading91').remove();clearTimeout(window.loadingSlow91);
   window.__game.provaMusica103();   // v103: musica della lobby subito, se il browser lo permette
+  benvenuto111(window.__game);   // v111: nome (e sparo automatico) alla prima apertura
   const el=document.getElementById('assetStatus85');if(el){if(assetErrors85.length){el.textContent='Caricamento incompleto — '+assetErrors85.join(' | ')+' · Tocca per chiudere';el.style.background='#782b26ee';el.onclick=()=>el.remove();}else el.remove();}
  }catch(err){console.error(err);clearTimeout(window.loadingSlow91);window.loadingFailure91();}
 }

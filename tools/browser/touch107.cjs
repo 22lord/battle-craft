@@ -8,7 +8,7 @@ const { chromium } = require('playwright-core'); const path = require('path');
   const out = process.argv[2];
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true, args: ['--use-angle=d3d11', '--ignore-gpu-blocklist'] });
   const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
-  const page = await ctx.newPage(); const cdp = await ctx.newCDPSession(page);
+  const page = await ctx.newPage(); await page.addInitScript(() => { try { localStorage.setItem('battlecraft_benvenuto111', '1'); } catch (e) { } });   // v111: niente finestra del nome, copre i pulsanti const cdp = await ctx.newCDPSession(page);
   const errs = []; page.on('pageerror', (e) => errs.push('PAGEERROR ' + e.message));
   await page.goto('http://localhost:8123/index.html', { timeout: 180000 });
   await page.waitForFunction(() => window.__game && window.__game.world, null, { timeout: 180000 });
