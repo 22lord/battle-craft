@@ -4,11 +4,15 @@ Documento di passaggio di consegne. Serve a riprendere in una chat nuova senza r
 da zero e senza rifare errori già pagati.
 
 Autore: Lorenzo Deda (@22lordd), Napoli.
-Stato al 25 novembre 2026: **battlecraft v109**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
+Stato al 25 novembre 2026: **battlecraft v110**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
 **fusi**: l'isola della vecchia "mappa" è il terreno della partita.
 
-Versione del contesto: v9. Le v94-v97 non sono mai arrivate in chat:
-le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8, v109 in 9.9.
+Versione del contesto: v10. Le v94-v97 non sono mai arrivate in chat:
+le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8, v109 in 9.9, v110 in 9.10.
+
+**Dalla v110 la grafica procede a fasi** (prompt in `docs/PROMPT-GRAFICA.md`, una fase per sessione, piano
+prima e ok di Lorenzo). Fatta: **fase 1 (luce, cielo, post-processing)**. Prossima: **fase 2 (materiali e
+texture)**. Ogni fase rifà le 6 inquadrature fisse con `tools/browser/fase.cjs` (sezione 9.10).
 
 **Novità grossa della v103: il gioco adesso si può VEDERE renderizzato** (sezione 3.1), dal
 PC di Lorenzo, con la sua GPU. Molte frasi "non verificato a occhio" qui sotto si possono
@@ -49,7 +53,7 @@ ancora quella, ma adesso vive dentro il gioco.
    richiesta poggia su una diagnosi sbagliata, dirlo. Richiesta sua, testuale: «ogni volta
    che ti do sti comandi cerca di sviluppare un senso critico».
 4. **Ogni file consegnato va rinominato con un numero di versione progressivo**, mai lo
-   stesso nome due volte. La prossima è la **v110**. Nella repo il file si chiama `index.html` e la
+   stesso nome due volte. La prossima è la **v111**. Nella repo il file si chiama `index.html` e la
    versione sta in `VERSIONE`: le consegne fuori dalla repo restano `battlecraft-vNN.html`.
 5. Gli archivi del modello che ha fornito **non contengono licenza**: da verificare sul
    sito di origine prima di qualsiasi pubblicazione.
@@ -178,6 +182,13 @@ Valori misurati, da riusare:
 screenshot reale 193. Entro l'1%. Attenzione: la v93 cambia sole, luce diffusa e foschia
 nel suo "DOPO", quindi prima di riusare questi numeri **leggere i valori nuovi nel codice**.
 
+**Dalla v110 il modello è codice: `tools/luce110.cjs`** (formule sopra + curva ACES di Three r160 copiata
+esatta + il grading del gioco `GRADING110`, che il test `v110.cjs` tiene allineato). Il tone mapping non è più
+lineare: `CustomToneMapping` = ACES + grading. Le chiavi del ciclo del giorno da provare stanno in
+`tools/luce110-chiavi.json`. **Riverificato il 25/11** sul render (`tools/browser/pelle110.cjs`, mezzogiorno,
+avambracci rivolti in su): previsione 240/226/218, misura 238/226/220. La radianza media della mappa
+d'ambiente ora cambia con l'ora (circa 0,12/0,20/0,28 a mezzogiorno).
+
 ---
 
 ## 4. Il metodo — la parte più importante del documento
@@ -262,6 +273,20 @@ test/pavimenti.cjs          v103: piastrelle che reggono, si rompono, tornano; n
 test/villaggio.cjs [SEME]   v103: case all'asciutto, pontili calpestabili, faro, bottino
 test/scivolamento.cjs check v103: piede in appoggio fermo, accovacciati, velocita' vere
 tools/browser/              v103: render veri con Edge (non sono test: vedi README)
+test/v110.cjs               v110: curva, nebbia, livelli di qualità, ciclo del giorno, modello analitico, F3, mappa non spostata
+```
+
+Strumenti della v110 (in `tools/`, non sono test):
+
+```
+tools/browser/fase.cjs <out> [url] [qualità] [ora]   le 6 inquadrature fisse delle fasi grafiche (+ draw call/triangoli)
+tools/browser/affianca.cjs <out.png> <colonne> img...  griglia di immagini con etichette (prima | dopo)
+tools/browser/misura.cjs <img> x y w h [img2...]       mediana/90% di R,G,B,luminanza in un riquadro
+tools/browser/pelle110.cjs <out.png> [ora]             personaggio di fronte al sole, per misurare la pelle
+tools/browser/costi110.cjs [w h] [url]                 ms GPU veri (query del timer) per ogni effetto, vista fissa
+tools/browser/f3110.cjs <out>                          prova del pannello F3 e dei suoi interruttori
+tools/luce110.cjs                                      modello analitico delle luci (sezione 3)
+tools/patch110/                                        la patch della v110 (blocco.js, cielo.js, applica.cjs)
 ```
 
 Tempi: ~10 minuti in tutto sul banco di prova del cloud.
@@ -466,6 +491,24 @@ entro 5 mm dall'ancoraggio.
 32. **Sulla porta 8123 puo' esserci gia' un server** lasciato da una sessione precedente (serve la repo, va
     bene): un secondo server sulla stessa porta muore con EADDRINUSE. Per confrontare con una versione
     vecchia usare un'altra porta.
+33. **`renderer.info.render` con `autoReset` di serie si azzera DOPO il passaggio delle ombre**: i draw call e i
+    triangoli "di una vista" fino alla v109 non contavano le ombre. Dalla v110 `info.autoReset = false` e si azzera
+    a mano a ogni fotogramma (F3): in piazza ~2 M di triangoli con le ombre, dal bus ~5,8 M. Non confrontare i
+    numeri vecchi coi nuovi.
+34. **Il generatore del mondo (`wrand`) è condiviso da tutto ciò che nasce dopo**: le nuvole stanno in `makeSky`,
+    prima di case e alberi. Una nuvola in più (5 chiamate a `wrand`) sposterebbe l'intera mappa. Nella v110 sono
+    restate 16 con le stesse chiamate; il test `v110.cjs` blocca la mappa (1656 oggetti raccoglibili, 31 case).
+35. **git estrae `index.html` in CRLF** (`core.autocrlf = true`) anche se nel repo è LF: le patch che cercano
+    `'\nclass Game {\n'` non trovano niente dopo un `git checkout`. `tools/patch110/applica.cjs` normalizza a LF.
+36. **Un cielo disegnato per primo calcola ogni pixel dello schermo** (anche quelli che poi le case coprono): ~1 ms
+    a 1080p sulla UHD col cielo della v110. Ora `renderOrder = 1000` col test di profondità: solo i pixel visibili.
+37. **Nei render target Three non applica tone mapping né sRGB**: col post-processing il passo finale li fa per
+    tutti, anche per i materiali `toneMapped:false` (bagliori additivi), che quindi in Media/Alta vengono
+    compressi dalla curva. In Bassa no.
+38. **Cambiare Post o Ombre (F3, o la qualità) ricompila tutti i programmi**: uno scatto di qualche centinaio di ms
+    subito dopo il clic, non è il costo dell'effetto. Misurare dopo qualche secondo.
+39. **ACES desatura le luci forti**: la pelle in pieno sole a mezzogiorno arriva a 238 su 255 quasi grigia (albedo
+    della texture già 0,70). Abbassare il sole cambia pochi punti (calcolato); è da fase 5 (pelle), non da luci.
 
 ---
 
@@ -712,7 +755,7 @@ Richiesta di Lorenzo, testuale: «il castello è troppo in alto e su una collina
 oggetti si possono trapassare e non dovrebbe essere così. ci sono ancora lampioni che collidono
 con le macchine e non va bene. sassi nelle case. risolvi tutti i problemi di questo tipo. in screen
 in quella posizioni di strutture non posso mettere una struttura in mezzo come il pavimento vorrei
-risolvere questa cosa. il piccone non fa danni. posso rompere le mura del castello come su fortnite
+risolvere questa cosa. il piccone non fa danni. posso rompere le mura del castello come su [il riferimento]
 o come le case che già ci sono. nelle torri non posso entrare». Screenshot: `screen/` (due muri
 paralleli, rampa in mezzo, giocatore sulla rampa).
 
@@ -979,6 +1022,78 @@ ripresa toccando: tutto provato in Edge). **Non provato**: telefono vero, l'audi
 Strumento che ha mentito: la prima misura del "cespuglio sepolto" prendeva il vertice più affondato, che in
 pendenza è il lato a monte (deve affondare): dava -3 m e "falliva". La misura giusta è il centro.
 
+### 9.10 Cosa cambia nella v110 — fase grafica 1: luce, cielo, post-processing
+
+Richiesta: `docs/PROMPT-GRAFICA.md` (fasi 1-7, una per sessione). Al piano Lorenzo ha risposto, testuale: «ok vai.
+no voglio il giorno che cambia costantemente non che decido io. si se premo f3 fammi vedere gli fps». Quindi niente
+preset da scegliere: **ciclo del giorno continuo**. AO spenta di serie in Media (accendibile da F3).
+
+Tutto il codice nuovo sta in un blocco prima di `class Game` (suffisso `110`). La patch è riproducibile:
+`git checkout index.html VERSIONE && node tools/patch110/applica.cjs` (sorgenti in `tools/patch110/`).
+
+- **Curva**: `THREE.CustomToneMapping` = ACES di Three + grading (`GRADING110`: saturazione 1,12, contrasto 1,05,
+  ombre verso blu-viola, luci calde; in spazio radice quadrata). Uguale a tutte le qualità. Tolto il filtro CSS
+  `saturate(1.14) contrast(1.05)` del canvas. AgX provato (`?tono=agx` nell'indirizzo): lava i colori, scartato.
+- **Nebbia d'altezza** (`NEBBIA110`): patch ai chunk `fog_*` di Three: un velo in più in basso che cresce con la
+  distanza. Colore della foschia = orizzonte del cielo x `CIELO110_LUM`.
+- **Ciclo del giorno** (`GIORNO110`, `Giorno110`): giro di **12 minuti** reali, parte al mattino. Il sole sale su un
+  arco (64° a mezzogiorno), azimut da -150° (alba) a +30° (tramonto, il lato della v109). 9 chiavi di colori/intensità
+  (alba, mattina, mezzogiorno, pomeriggio, ora d'oro, tramonto, crepuscolo, notte, aurora). **Notte corta e
+  "chiara"**: luce di luna azzurra a 42°, luce diffusa 1,8 ed esposizione 1,55, stelle, lampioni accesi
+  (`M.lamp` da 0,8 a 4,2 di emissione). La luce che fa ombra non scende sotto 14° e si muove a scatti di 0,2°;
+  sole e luna si scambiano solo quando la luce è a zero. Il giorno scorre anche in pausa e a fine partita.
+  Orologio in F3 (06:00 alba, 18:00 tramonto).
+- **Cielo** (`makeSky`): gradiente orizzonte-zenit, bagliore dalla parte del sole basso, alone e **disco del sole**
+  HDR (col bloom brilla) allineato alla luce delle ombre (prima il bagliore era a 7°, la luce a 28°), stelle.
+  Disegnato dopo gli opachi (trappola 36).
+- **Nuvole**: erano sprite oltre la fine della foschia, quindi tutte del colore della foschia (le "macchie
+  arancioni"). Ora billboard fuori dalla foschia, texture a sbuffi con la base piatta (4 forme), luce sulla forma
+  intera dal gradiente precalcolato della densità, bordo acceso verso il sole (di più in controluce), sfumate
+  all'orizzonte. Sempre 16 (trappola 34).
+- **Mappa d'ambiente** rifatta col colore del cielo ogni 1/48 di giro (~15 s).
+- **Ombre ancorate ai texel** (`stableSun110`, come `stableSun93` ma con la direzione che cambia): muovendosi le
+  ombre ferme non tremano. Riquadro invariato (±42 m).
+- **Post-processing** (`Post110`, solo Media/Alta, mai in lobby): scena in un target HalfFloat con la profondità,
+  poi **AO dalla sola profondità** a metà risoluzione (8 campioni, sfocatura che rispetta i bordi, sparisce oltre
+  70 m: niente secondo passaggio della geometria come il GTAO), **bloom** sopra soglia HDR 1,6 (dual filter a 4
+  livelli), passo finale (curva + grading + vignetta leggera + sRGB), **FXAA**. SMAA dagli addon di
+  three@0.160.0 (import dinamico, `three/addons/` nell'importmap) solo da F3. Senza WebGL2 o in Bassa: rendering
+  diretto come prima (col MSAA del canvas). Colpi, fiammate, anelli del bottino e schegge sono "HDR" (colore x2-3)
+  solo quando il bloom è acceso (`hdr110`).
+- **F3** (`Perf110`): FPS e ms medi (ultimo mezzo secondo), 95° percentile (ultimi 240 fotogrammi), **ms GPU** con
+  `EXT_disjoint_timer_query_webgl2` (in Edge sul PC di Lorenzo c'è), draw call e triangoli (ombre comprese), buffer,
+  qualità, ora. Interruttori cliccabili (Esc per liberare il mouse): Post, AO, Bloom, AA (FXAA/SMAA/no), Ombre,
+  Ora +3h. F3 blocca la ricerca del browser.
+
+**Costi misurati** (`tools/browser/costi110.cjs`, GPU vera, vista della piazza a mezzogiorno, 1920x1080, due giri):
+
+| configurazione | ms GPU | differenza |
+|---|---|---|
+| v109 Bassa / v109 con ombre | 7,5 / 12,4 | — |
+| v110 Bassa | 7,7-8,2 | +0,1/+0,7 (rumore ±0,3) |
+| v110 ombre senza post | 12,6-12,7 | |
+| post solo curva+grading (al posto del MSAA del canvas) | 11,8-11,9 | **-0,8** |
+| + FXAA | 12,7-13,1 | +0,8/+1,2 |
+| + bloom (= **Media**) | 13,6-14,0 | +0,6/+1,3 → Media = v109 +1,3/+1,6 |
+| + AO (= **Alta**) | 15,1-15,2 | +1,1/+1,6 → Alta = v109 +2,8 |
+| SMAA al posto di FXAA (solo F3) | 18,8-19,1 | +3,5/+4,1 |
+
+Le ombre restano il costo più grosso (+4,6 ms a 1080p: ridisegnano 1-3 M di triangoli). Lì andrà la prossima
+ottimizzazione vera (distanza delle ombre, oggetti che non le proiettano), non nel post-processing.
+
+**Render**: `screen/render/fase-1/prima/` (v109), `dopo/` (mezzogiorno, u = 0,33), `dopo-tramonto/` (0,70),
+`dopo-notte/` (0,86), `confronto/` (prima | dopo, una per inquadratura). Visto: ombre interne colorate e mai nere,
+nuvole con volume, sole col bagliore, notte leggibile coi lampioni, AO (Alta) negli angoli (nell'angolo
+scala/muro/cespuglio la mediana scende da 53 a 41; il pavimento aperto non cambia). Lobby: pelle illuminata
+mediana 138 → 152, punte 211 → 215; il nero della maglietta 41 → 22 (piede della curva).
+
+**Difetti noti, visti nei render**: dal bus resta una fascia di foschia all'orizzonte (di notte viola); a
+mezzogiorno la sabbia è chiara (texture: fase 2); la pelle a mezzogiorno è quasi grigia (trappola 39, fase 5).
+
+**Non verificato**: FPS giocando sul PC di Lorenzo (F3), il telefono (Bassa dovrebbe costare come prima, misurato
+solo sul PC), come si sente un giro di 12 minuti in partita (forse troppo veloce/lento: `GIORNO110.durata`),
+il caricamento di SMAA dalla CDN (in headless si carica: i programmi salgono di 3), la notte vista in movimento.
+
 ### Cosa non è verificato (detto dal LEGGIMI stesso, e vero)
 
 - **nessuno ha visto la v93 renderizzata** tranne, eventualmente, Lorenzo
@@ -1181,4 +1296,7 @@ galleggia, pali di staccionata tolti attorno al castello (sezione 9.8).
 **v109**: inventario a caselle (armi doppie, scambio, butta e riprendi), raccolta modulare, munizioni
 senza tetto, bus audio delle armi, tappi del castello senza fessure, cespugli a terra (sezione 9.9).
 
-**Prossima consegna: v110.**
+**v110**: fase grafica 1 — curva ACES + grading, ciclo del giorno continuo (12 min, notte chiara), cielo col
+sole e nuvole nuove, nebbia d'altezza, post-processing in Media/Alta (AO, bloom, FXAA), F3 con ms GPU (sezione 9.10).
+
+**Prossima consegna: v111** (fase grafica 2: materiali e texture).

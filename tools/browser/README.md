@@ -39,6 +39,12 @@ Poi:
   scatta durante il lancio (bus, caduta, deltaplano, atterraggio). Stampa stato,
   posizione ed errori della console.
 
+- **fasi grafiche (v110)**: `node tools/browser/fase.cjs <cartella> [url] [qualita'] [ora]` rifà le 6
+  inquadrature fisse (piazza del castello di spalle, muro da 1 m, lobby, bosco, villaggio, bus) con il caso fissato;
+  `ora` è la frazione del giro del giorno (0,33 mezzogiorno, 0,70 tramonto, 0,86 notte). Poi
+  `affianca.cjs` per il prima | dopo, `misura.cjs` per i valori dei pixel, `costi110.cjs` per i **ms GPU veri**
+  di ogni effetto (query del timer: questi sì che contano, a differenza degli FPS headless).
+
 Orientamento della minimappa: **alto = +z, sinistra = +x**.
 
 ## Cosa NON dicono

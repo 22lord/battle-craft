@@ -1,0 +1,5 @@
+[
+ {"nome":"mezzogiorno (u=0,33: elev 63,8, az -64,7)","dir":[0.189,0.897,-0.399],"sole":"fff0da","soleI":3.6,"cielo":"bfe0ff","terra":"8fa070","emiI":1.6,"amb":"9cc4ff","ambI":0.25,"env":[0.12,0.20,0.28],"exp":1.0},
+ {"nome":"tramonto (u=0,71: luce a 14 gradi)","dir":[0.835,0.242,0.494],"sole":"ff9a5a","soleI":2.8,"cielo":"ffb898","terra":"7a7a68","emiI":1.5,"amb":"7f80d8","ambI":0.32,"env":[0.10,0.10,0.14],"exp":1.05},
+ {"nome":"notte (u=0,85: luna a 42 gradi)","dir":[-0.64,0.67,-0.37],"sole":"a8c0ff","soleI":1.2,"cielo":"5a6aa8","terra":"2e3848","emiI":1.8,"amb":"4a5ab0","ambI":0.75,"env":[0.02,0.03,0.06],"exp":1.55}
+]
