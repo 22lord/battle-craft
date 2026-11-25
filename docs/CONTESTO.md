@@ -4,11 +4,11 @@ Documento di passaggio di consegne. Serve a riprendere in una chat nuova senza r
 da zero e senza rifare errori già pagati.
 
 Autore: Lorenzo Deda (@22lordd), Napoli.
-Stato al 24 novembre 2026: **battlecraft v106**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
+Stato al 25 novembre 2026: **battlecraft v108**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
 **fusi**: l'isola della vecchia "mappa" è il terreno della partita.
 
-Versione del contesto: v7. Le v94-v97 non sono mai arrivate in chat:
-le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6.
+Versione del contesto: v9. Le v94-v97 non sono mai arrivate in chat:
+le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8.
 
 **Novità grossa della v103: il gioco adesso si può VEDERE renderizzato** (sezione 3.1), dal
 PC di Lorenzo, con la sua GPU. Molte frasi "non verificato a occhio" qui sotto si possono
@@ -49,7 +49,7 @@ ancora quella, ma adesso vive dentro il gioco.
    richiesta poggia su una diagnosi sbagliata, dirlo. Richiesta sua, testuale: «ogni volta
    che ti do sti comandi cerca di sviluppare un senso critico».
 4. **Ogni file consegnato va rinominato con un numero di versione progressivo**, mai lo
-   stesso nome due volte. La prossima è la **v107**. Nella repo il file si chiama `index.html` e la
+   stesso nome due volte. La prossima è la **v109**. Nella repo il file si chiama `index.html` e la
    versione sta in `VERSIONE`: le consegne fuori dalla repo restano `battlecraft-vNN.html`.
 5. Gli archivi del modello che ha fornito **non contengono licenza**: da verificare sul
    sito di origine prima di qualsiasi pubblicazione.
@@ -444,6 +444,16 @@ entro 5 mm dall'ancoraggio.
 25. **Prima di dire "non si entra" provare il percorso giusto**: la torre nord-ovest sembrava
     chiusa, invece erano le botti davanti a bloccare il mio percorso in diagonale. Camminare
     lungo l'asse della porta (le colonne di legno si ricavano dal modello).
+26. **Riempimento delle cavita' a voxel: attenzione al fondo.** Una griglia che scende sotto il piano
+    di calpestio lascia passare l'aria "da sotto" in ogni volume senza fondo (i muri del castello):
+    il riempimento non scatta e nessun test se ne accorge (si cammina sopra e intorno). Visto solo
+    con una sezione delle collisioni stampata a caratteri (`#`/`.`) a 25 cm.
+27. **Campionare collisioni sottili a passo largo mente**: una sezione a 50 cm "vedeva" i muri del
+    castello tratteggiati (pareti da 20 cm saltate fra un campione e l'altro). Passo <= meta' dello
+    spessore, o si legge un buco che non c'e'.
+28. **`hMin102` (quota piu' bassa) su un oggetto largo**: niente galleggiamento a valle, ma affonda a
+    monte, e cio' che sta oltre il raggio controllato (le panche del fuoco a 2,4 m) resta sospeso.
+    Per gli oggetti fissi meglio la piazzola (`piazzola107`).
 
 ---
 
@@ -745,6 +755,151 @@ Test nuovi: `sovrapposizioni.cjs` (3 semi), `piccone-costruzioni.cjs`; `castello
 anche torri e blocchi. Visto nei render: collina, torri, varco nel muro, molo. **Non visto giocando**:
 la sensazione del piccone sui bot, la mira "in alto" per il pavimento (soglia 0,45 da tarare con lui).
 
+### 9.7 Cosa cambia nella v107
+
+Richiesta di Lorenzo, testuale: «ti ho messo in screen tutta la roba che non mi piace. tipo quel pozzo
+fatto malissimo e con le mura al contrario e quadratissimo. il fatto che spacco un muro del castello e
+ci posso entrare dentro e non dovrebbe essere così. oggetti per la mappa che collidono con terreno in
+pendenza. quando prova a fare un "novanta" con le build. quando provo a mettere il pavimento non mi fa
+mettere il pavimento sulla scala. poi da mobile. quando sono nella mode solo armi non ci deve essere il
+tasto per editare le mura. non ci deve essere nemmeno il tasto per cambiare le armi tanto basta che le
+clicco. se clicco sulla scritta dell arma non sempre me la prende. voglio il tasto per saltare più
+grande. e che se sto muovendo la visuale e finisco sui quei tasti non è che il movimento che stavo
+facendo si blocca. sia se clicco dall inizio che da dopo». Screenshot in `screen/` (24-25/11).
+
+**Pozzo rifatto** (`pozzo`): erano 10 scatole con `rotY: a`, che gira l'asse lungo nel verso
+sbagliato (non tangente: denti storti), sotto un tetto piatto. Ora anello vero (cilindro esterno +
+interno con facce girate), bordo sporgente, acqua scura (`M.wellWater107`), pali, tettuccio a due
+falde, argano, corda, secchio. Collisione a croce di tre scatole. Visto nel render: si legge.
+In citta' pozzo e bancarelle erano incastrati contro le case della via (visto dall'alto): ora cercano
+un posto libero (`liberoVicino107`).
+
+**Oggetti sui pendii** (`piazzola107`): pozzo, catasta, orto, fuoco spento, bancarelle e cassonetti
+spianano una piazzola sotto di se' (quota media dell'impronta, sfumatura 3,5 m) in `PADS102`, come le
+case; la mesh del terreno si rifa' dopo (`rifaiTerreno102`, gia' cosi'). Prima `hMin102`: le panche
+del fuoco spento (a 2,4 m dal centro, fuori dal raggio controllato) restavano sospese, l'orto affondava a
+monte (lo screenshot). Le impronte stanno in `World.oggetti107` e `occupato106` le conta: un masso era
+finito sopra una panca (gli oggetti senza collisione non risultavano occupati).
+
+**Muri del castello pieni.** Misurato con una sezione delle collisioni a caratteri: il muro +x a z+5 ha
+la parete esterna a ~18,75 dal centro e l'interna a ~16,4, e in mezzo **2 m d'aria anche nelle
+collisioni**. Il riempimento delle cavita' di `costruisci.cjs` perdeva da sotto (trappola 26). Corretto
+nel convertitore, piu' i **tappi** di pietra sui confini dei blocchi (dettagli in
+`tools/castello/README.md`). Visto nel render: rotta la parete esterna dietro c'e' pietra; rotte
+tutte e due, un varco pulito coi fianchi di pietra. Il commento "-26: i muri stanno in un blocco solo"
+era falso (il confine a 18 taglia il muro): corretto.
+
+**Costruzioni.**
+- Pavimento guardando in basso: livello dai piedi (`floor((piedi + 2,6) / 4)`), cioe' in cima alla rampa
+  oltre un terzo della salita. Prima petto - 5 m di mira = base della rampa, dove c'era gia' il pavimento:
+  «Già occupato» (lo screenshot 133104).
+- Posto occupato = un livello sopra (`baseKey` ricorda il posto originale: tenendo premuto non si impila).
+- Chi costruisce non blocca se stesso: pavimento o rampa che gli passano fra le gambe (fino a 1,3 m
+  sopra i piedi) vengono messi e lo sollevano sopra.
+- "Novanta" (in cima alla rampa, girati di 90 gradi, in salto: muro + pavimento + rampa): nella v106 il
+  pavimento finiva sulla base occupata. Ora passano tutti e tre (test). **Interpretazione mia**: la frase
+  di Lorenzo e' tronca; da chiedergli se il novanta che intende e' questo e come si sente giocando.
+
+**Telefono.**
+- Modifica solo in costruzione (la regola CSS lo mostrava sempre), tolto «Arma ›».
+- Salto 76 px (era 48), Costruisci spostato per fargli posto (anche in verticale).
+- Barra delle armi: caselle 52 px (erano 44) e un tocco fuori dalla casella (sulla scritta, fra due) prende
+  la casella piu' vicina; trascinando dalla barra si gira la visuale.
+- Visuale: ogni tasto trascinato (non solo Spara) gira la visuale, dopo 9 px. Movimenti e rilascio
+  ascoltati sulla finestra; il gesto non finisce piu' su `lostpointercapture`. **Attenzione**: in Edge
+  emulato la visuale non si fermava passando sopra i tasti nemmeno nella v106; la causa sul telefono
+  vero e' una mia ipotesi (perdita della cattura del puntatore). Da far provare a Lorenzo.
+- Provato con `tools/browser/touch107.cjs` e `touch.cjs` (joystick e raccolta invariati).
+
+**Sistema dei colpi** (seconda richiesta della sessione: un prompt generico su hitbox, tunneling,
+danno, feedback). Detto a Lorenzo: le armi sono **hitscan**, il tunneling qui non esiste; il colpo a se
+stessi era gia' escluso (`ignore: ch`). Fatto:
+- **zone**: `characterHit86` riscritta, 9 capsule sulle ossa in 5 zone (head, chest, stomach, arm, leg).
+  Fase larga con una sfera di 1,25 m: chi e' lontano dal raggio non tocca lo scheletro. Zero allocazioni
+  (la v106 creava ~40 oggetti per personaggio per raggio). Misurato nello stesso banco: **51 us contro
+  1.080 us** per raggio sui 29 personaggi, stessi colpi trovati (20 su 20)
+- **dati per arma** in `WEAPONS`: `zone` (moltiplicatori), `falloffMin`, `perfora` (quota che salta lo
+  scudo, ora 0 ovunque), `spinta` (pompa 0,35 per pallino, precisione 2,2 m/s). `head` resta = zone.head
+- **`dannoArma107`**: base x zona x calo con la distanza x difficolta' (bot -> giocatore)
+- **`ColpoInfo107`** (un oggetto riusato in `Combat.colpo107`): attaccante, vittima, arma, zona, punto,
+  normale, direzione, distanza, danno, danno allo scudo / alla vita, scudo rotto, uccisione, materiale.
+  `takeDamage` ci scrive la divisione del danno. **`EsitoSparo107`** riassume i pallini di uno sparo:
+  hitmarker `kill` > `head` > `shield` (nuovo, azzurro) > normale, una volta per sparo
+- audio: `impatto107` (legno, pietra, metallo, terra; piu' piano con la distanza, muto oltre 29 m) e
+  `scudoRotto107`. Non ascoltati
+- niente ragdoll: alla morte resta la caduta procedurale che c'era
+- **bilanciamento cambiato**: braccia e gambe ora fanno meno (fucile 0,8 = 18 invece di 23). Da far
+  provare a Lorenzo
+- test `colpi107.cjs`. Strumento che ha mentito: il bot appena creato puo' essere raccolto (seduto sui
+  talloni, posa del bus): sparando da dietro alla gamba il busto la copre e il raggio prende "chest", che e'
+  giusto. Il test spara a ogni parte dal lato da cui sporge
+- `VisualLab93.setup` (prova grafica) provava una sola coppia casa/pino e si arrendeva se li' la pendenza
+  bloccava il percorso: cambiando dove nascono gli alberi falliva `integrazione.cjs`. Ora prova fino a 12
+  coppie. Una volta `integrazione` e' fallita anche su "tutti i bot saltano entro 24 s" e poi non piu':
+  sembra casuale, non indagato
+- piazzole: dove quella di un oggetto tocca quella di una casa vince la casa e l'oggetto ne prende la quota
+  (`mondo 999` trovava una casa sospesa)
+
+Test nuovo: `v107.cjs` (pozzi, piazzole, muro pieno e varco, pavimento sulla rampa, novanta, pavimento
+fra le gambe). Non visto giocando: i novanta, il telefono vero.
+
+### 9.8 Cosa cambia nella v108
+
+Richiesta di Lorenzo, testuale: «ho messo il deltaplano nella cartella che deve essere implementato. ogni
+volta che mi butto da un altezza un po alta posso attivarlo. fuori dal castello sono rimasti dei residui
+volanti tagliati che devono essere tolti. il deltaplano deve avere un animazione di sventolamento
+realistico. anche il bus non deve volare completamente dritto. cioè si. la traiettoria è quella. ma deve
+cmq avere un animazione di sospensione irregolare nell aria».
+
+**Il deltaplano di Lorenzo** (`Deltaplano-Laguna.glb` nella radice della repo: Blender, 56.800 triangoli,
+65 oggetti, 7 materiali a tinta unita, niente texture, niente animazioni). Convertito da
+`tools/deltaplano/costruisci.cjs` (README accanto) in `DELTAPLANO108_B64` (260 KB): trasformazioni dei
+nodi applicate, semplificato per oggetto con meshoptimizer (vela al 55% perche' lo shader ha bisogno di
+vertici, sfere/cuciture/bordi al 14-22%), unito per materiale: **17.600 triangoli**, 7 mesh. Nel modello
++z e' il muso, le manopole stanno a x = +-0,35, y = 0. In gioco `makeGlider88` clona il modello
+(geometria condivisa, `disposeGlider108` non la butta) con materiali propri; se il modello manca resta il
+triangolo procedurale di prima.
+- **sventolamento** (`VELA108`, `velaShader108`): nel vertex shader, onde che corrono dal bordo d'attacco
+  al bordo d'uscita, nulle davanti e massime dietro e verso le punte, piu' un fremito veloce nei pannelli
+  che si annulla sulle cuciture (|x| = 0,29 / 0,85 / 1,41 / 1,97, come le stecche di una vela vera).
+  Normali corrette con la derivata, il telaio sotto y = 0,55 resta rigido. Intensita' per deltaplano:
+  cresce con la velocita' e in virata, forte durante l'apertura. Ampiezza `VELA108.ampiezza` = 0,11 m.
+  Un solo programma per tutti (`customProgramCacheKey`). L'ombra non sventola (MeshDepthMaterial)
+- **apertura**: la vela si allarga di lato con un piccolo rimbalzo (easeOutBack) mentre sbatte
+- **turbolenza**: pilota e deltaplano beccheggiano, rollano e sobbalzano insieme (somme di seni)
+- **presa**: il deltaplano sta 0,44 m sopra le spalle, le mani vanno con l'IK sulle due manopole
+- visto nei render (dietro, di lato, davanti): orientamento giusto, il pilota appeso sotto la barra.
+  Lo sventolamento si vede confrontando due fotogrammi, ma **in movimento non l'ho visto**: da far giudicare
+  a Lorenzo (se poco/troppo: `VELA108.ampiezza`)
+
+**Deltaplano cadendo da in alto** (`Drop88.puoAprire108` / `riapri108`): in partita, se si sta cadendo
+(vel.y < -1, non salendo) con almeno `VELA108.quota` = **6 m** di vuoto sotto i piedi, compare
+«Spazio · APRI DELTAPLANO» (stesso riquadro del lancio, anche tocco/controller) e il tasto del salto lo
+apre. Da li' e' la planata del lancio (`air88` con `redeploy108`): 10 m/s avanti, discesa a 4,7 m/s,
+atterraggio uguale, senza il messaggio «Atterraggio completato». Esce dalla costruzione/modifica. Niente
+nebbia e dettaglio "da lancio" (solo nel lancio vero) e la telecamera scivola nella posizione da planata
+invece di saltarci. Suono di apertura anche qui. Non si richiude (non richiesto; si potrebbe aggiungere).
+I bot non lo usano. Soglia dei 6 m: **scelta mia**, da tarare con lui.
+
+**Bus**: la rotta resta la retta, ma sopra ci sono quota (+-0,9 m), scarto laterale (+-0,5 m), rollio
+(~3°), beccheggio (~2°) e un filo d'imbardata, ognuno somma di 2-3 seni a frequenze non multiple con una
+fase casuale per partita. Prima: un seno solo di 30 cm. Il bus e' lungo sull'asse x locale (rotation.x =
+rollio). Misurato nel test: picchi di quota a intervalli diversi, scarto massimo 0,5 m.
+
+**Residui attorno al castello**: erano pali e traverse della staccionata dell'isoletta del modello,
+tagliati dal quadrato `DENTRO` del convertitore: un palo con due traverse mozzate davanti alla porta e un
+palo sotto la torre di sud-ovest (trovati cercando le componenti connesse della mesh fuori dalle mura,
+poi visti nei render). `costruisci.cjs` ora toglie le componenti piccole (<1,5 m), sotto 1 m e a piu' di
+22,5 m dal centro (4 pezzi, 316 triangoli). L'edera sul muro est (19 triangoli a 23,3 m, ma a 3,7 m
+d'altezza) e le pietre/finestre delle torri restano. Castello rigenerato: 348 blocchi, 18.446 scatole.
+
+Test nuovo `v108.cjs` (modello, apertura in partita: non a terra / non a 3 m / non salendo / si' a 20 m,
+discesa e atterraggio, nebbia; bus; niente pezzi fuori dalle mura). Il banco di prova ora carica anche
+il deltaplano (`harness.cjs`).
+
+Strumento che ha mentito: la prima soglia per i pezzi tagliati era "sotto 50 cm" e diceva "tolti"; il
+test che guarda i vertici (non le componenti) ha trovato la traversa alta, che parte da 62 cm.
+
 ### Cosa non è verificato (detto dal LEGGIMI stesso, e vero)
 
 - **nessuno ha visto la v93 renderizzata** tranne, eventualmente, Lorenzo
@@ -938,4 +1093,10 @@ espulsione sull'isola, scivolamento da accovacciati, primi render veri (sezione 
 **v106**: castello piu' basso, distruttibile, torri accessibili; sovrapposizioni e oggetti
 attraversabili; piccone sui personaggi; pavimento sopra la testa (sezione 9.6).
 
-**Prossima consegna: v107.**
+**v107**: pozzo rifatto, piazzole sotto gli oggetti, muri del castello pieni coi tappi, pavimento sulla
+rampa e novanta, comandi del telefono (sezione 9.7).
+
+**v108**: deltaplano di Lorenzo con la vela che sventola, deltaplano cadendo da in alto, bus che
+galleggia, pali di staccionata tolti attorno al castello (sezione 9.8).
+
+**Prossima consegna: v109.**

@@ -27,6 +27,9 @@ const test = [
   ['sovrapposizioni.cjs', ['999', 'check']],
   ['sovrapposizioni.cjs', ['123456', 'check']],
   ['piccone-costruzioni.cjs', []],
+  ['v107.cjs', []],
+  ['colpi107.cjs', []],
+  ['v108.cjs', []],
 ];
 
 let falliti = 0;

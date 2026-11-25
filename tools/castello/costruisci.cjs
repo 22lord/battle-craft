@@ -35,8 +35,10 @@ const VOX = 0.2, VOXY = 0.15;   // collisioni: passo orizzontale e verticale, in
 // v106: blocchi distruttibili. Il castello e' diviso in cubi da BLOCCO m (origine BLOCCO0 in pianta,
 // fasce da BLOCCO in altezza sopra ZOCCOLO): ogni triangolo va al blocco del suo baricentro, ogni
 // scatola di collisione resta dentro un blocco. Sotto ZOCCOLO (selciato, piede dei muri) e' fisso: -1.
-const BLOCCO = 4, BLOCCO0 = -26, ZOCCOLO = 0.3;   // -26: i muri (cavi, pareti a +-22,5 e +-24,5) stanno in un blocco solo
+const BLOCCO = 4, BLOCCO0 = -26, ZOCCOLO = 0.3;   // v107: misurato nel gioco, le pareti dei muri stanno a ~16,4 e ~18,75 dal centro: il confine a 18 le divide (i tappi chiudono il taglio)
 const bloccoDi = (x, y, z) => y < ZOCCOLO ? null : [Math.floor((x - BLOCCO0) / BLOCCO), Math.floor((y - ZOCCOLO) / BLOCCO), Math.floor((z - BLOCCO0) / BLOCCO)];
+// v107: tappi di pietra sui confini dei blocchi dentro i muri cavi (li calcola collisioni())
+const CAP_MAT = 'stone', CAPS = { list: [], n: 0 };
 const blocchi = new Map(), elencoBlocchi = [];   // chiave 'i,j,k' -> id progressivo
 const idBlocco = (x, y, z) => { const b = bloccoDi(x, y, z); if (!b) return -1; const k = b.join(','); let id = blocchi.get(k); if (id === undefined) { id = elencoBlocchi.length; blocchi.set(k, id); elencoBlocchi.push(b); } return id; };
 
@@ -75,6 +77,24 @@ for (const [m, f] of facce) {
   }
   if (keep.length) mats[m] = keep;
 }
+// v108: il quadrato DENTRO taglia la staccionata dell'isoletta: restavano pali e traverse mozzati
+// davanti alla porta e sotto la torre di sud-ovest (a ~23 m dal centro, visti nei render). Tolgo
+// le componenti connesse piccole, a terra e fuori dalle mura. Le pietre e le finestre delle torri
+// (stessa distanza ma sopra 1 m) restano.
+for (const m in mats) {
+  const f = mats[m], par = new Map();
+  const F = (a) => { while (par.get(a) !== a) { const p = par.get(par.get(a)); par.set(a, p); a = p; } return a; };
+  for (const [vi] of f) if (!par.has(vi)) par.set(vi, vi);
+  for (let k = 0; k < f.length; k += 3) { const a = F(f[k][0]); par.set(F(f[k + 1][0]), a); par.set(F(f[k + 2][0]), a); }
+  const comp = new Map();
+  for (let k = 0; k < f.length; k += 3) { const r = F(f[k][0]); let c = comp.get(r); if (!c) comp.set(r, c = { mn: [1e9, 1e9, 1e9], mx: [-1e9, -1e9, -1e9] }); for (let q = 0; q < 3; q++) { const g = tx(f[k + q][0]); for (let d = 0; d < 3; d++) { c.mn[d] = Math.min(c.mn[d], g[d]); c.mx[d] = Math.max(c.mx[d], g[d]); } } }
+  const via = new Set();
+  for (const [r, c] of comp) { const cx = (c.mn[0] + c.mx[0]) / 2, cz = (c.mn[2] + c.mx[2]) / 2, size = Math.max(c.mx[0] - c.mn[0], c.mx[1] - c.mn[1], c.mx[2] - c.mn[2]); if (c.mn[1] < 1.0 && size < 1.5 && Math.max(Math.abs(cx), Math.abs(cz)) > 22.5) via.add(r); }
+  if (!via.size) continue;
+  const keep = []; for (let k = 0; k < f.length; k += 3) if (!via.has(F(f[k][0]))) keep.push(f[k], f[k + 1], f[k + 2]);
+  if (report) console.log('  staccionata tagliata:', m, via.size, 'pezzi,', (f.length - keep.length) / 3, 'triangoli');
+  if (keep.length) mats[m] = keep; else delete mats[m];
+}
 
 // vertici unici per (posizione, uv, normale): le cuciture restano vertici separati
 function costruisci(f) {
@@ -95,6 +115,10 @@ function costruisci(f) {
 
 (async () => {
   await MS.ready; MS.useExperimentalFeatures = true;
+  // v107: collisioni PRIMA della mesh: il riempimento dei muri cavi produce anche i "tappi" di
+  // pietra sui confini dei blocchi (CAPS), che entrano nella mesh del materiale CAP_MAT
+  const cols = collisioni(mats);
+  console.log('scatole di collisione', cols.length / 7, 'blocchi', elencoBlocchi.length, 'tappi', CAPS.n, 'rettangoli');
   const prims = []; let triPrima = 0, triDopo = 0;
   for (const m in mats) {
     const g = costruisci(mats[m]); triPrima += g.idx.length / 3;
@@ -139,6 +163,27 @@ function costruisci(f) {
       tagliati++;
       for (const pl of polys) { let cx = 0, cy = 0, cz = 0; for (const p of pl) { cx += p[0]; cy += p[1]; cz += p[2]; } const bb = idBlocco(cx / pl.length, cy / pl.length, cz / pl.length); for (let k = 1; k + 1 < pl.length; k++) metti(bb, [pl[0], pl[k], pl[k + 1]]); }
     }
+    // v107: tappi sui confini dei blocchi dentro i muri cavi. Densita' delle uv presa dal materiale
+    // stesso (mediana di |duv|/|dpos| sugli spigoli), colore AO medio del materiale
+    if (m === CAP_MAT && CAPS.list.length) {
+      const rr = []; let cr = 0, cg = 0, cb = 0;
+      for (let t = 0; t < idx.length; t += 3) for (let e = 0; e < 3; e++) { const a = idx[t + e], b = idx[t + (e + 1) % 3]; const dp = Math.hypot(pos[a * 3] - pos[b * 3], pos[a * 3 + 1] - pos[b * 3 + 1], pos[a * 3 + 2] - pos[b * 3 + 2]); if (dp > 0.05) rr.push(Math.hypot(uv[a * 2] - uv[b * 2], uv[a * 2 + 1] - uv[b * 2 + 1]) / dp); }
+      for (let i = 0; i < col.length; i += 3) { cr += col[i]; cg += col[i + 1]; cb += col[i + 2]; }
+      const nv0 = col.length / 3; cr /= nv0; cg /= nv0; cb /= nv0;
+      rr.sort((x, y) => x - y); const dens = rr[rr.length >> 1] || 0.5;
+      for (const q of CAPS.list) {
+        // q: { b, ax, c, dir, u0, u1, v0, v1 } : piano ax = c, normale dir sull'asse ax
+        const ua = (q.ax + 1) % 3, va = (q.ax + 2) % 3;
+        const P4 = [[q.u0, q.v0], [q.u1, q.v0], [q.u1, q.v1], [q.u0, q.v1]].map(([u, v]) => { const p = [0, 0, 0]; p[q.ax] = q.c; p[ua] = u; p[va] = v; const n = [0, 0, 0]; n[q.ax] = q.dir; const tu = q.ax === 1 ? p[0] : (q.ax === 0 ? p[2] : p[0]), tv = q.ax === 1 ? p[2] : p[1]; return [p[0], p[1], p[2], tu * dens, tv * dens, cr, cg, cb, n[0], n[1], n[2]]; });
+        // verso dei triangoli: la faccia guarda dir
+        const e1 = [0, 1, 2].map((k) => P4[1][k] - P4[0][k]), e2 = [0, 1, 2].map((k) => P4[2][k] - P4[0][k]);
+        const nn = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
+        const ok = nn[q.ax] * q.dir > 0;
+        if (ok) { metti(q.b, [P4[0], P4[1], P4[2]]); metti(q.b, [P4[0], P4[2], P4[3]]); }
+        else { metti(q.b, [P4[0], P4[2], P4[1]]); metti(q.b, [P4[0], P4[3], P4[2]]); }
+      }
+      if (report) console.log('    tappi su', m, CAPS.list.length, 'rettangoli, densita uv', dens.toFixed(3));
+    }
     const P2 = [], U2 = [], C2 = [], N2 = [], I2 = [], tab = [];
     const emetti = (w) => { P2.push(w[0], w[1], w[2]); U2.push(w[3], w[4]); C2.push(Math.round(w[5]), Math.round(w[6]), Math.round(w[7])); const l = Math.hypot(w[8], w[9], w[10]) || 1; N2.push(Math.round(w[8] / l * 127), Math.round(w[9] / l * 127), Math.round(w[10] / l * 127)); return P2.length / 3 - 1; };
     for (const [bk, tl] of [...perB].sort((x, y) => x[0] - y[0])) {
@@ -154,9 +199,6 @@ function costruisci(f) {
   console.log('triangoli: originale filtrato', triPrima, '-> semplificato', triDopo);
   if (report) for (const p of prims) console.log(' ', p.m.padEnd(11), p.tri0, '->', p.idx.length / 3, 'vertici', p.pos.length / 3);
 
-  // ---------- 6. collisioni ----------
-  const cols = collisioni(mats);
-  console.log('scatole di collisione', cols.length / 7, 'blocchi', elencoBlocchi.length);
 
   // ---------- 5. texture + GLB ----------
   const bin = []; let off = 0; const bufferViews = [], accessors = [], images = [], textures = [], materials = [], primitives = [];
@@ -224,18 +266,7 @@ function collisioni(mats) {
       if (triBox(cen, h, a, b, c)) g[k] = 1;
     }
   }
-  // riempimento dall'esterno (6-connesso) sui voxel vuoti
-  const vis = new Uint8Array(g.length); const st = [];
-  for (let z = 0; z < NZ; z++) for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) if (x === 0 || z === 0 || x === NX - 1 || z === NZ - 1 || y === NY - 1) { const k = id(x, y, z); if (!g[k]) { vis[k] = 1; st.push(k); } }
-  while (st.length) {
-    const k = st.pop(); const x = k % NX, y = Math.floor(k / NX) % NY, z = Math.floor(k / (NX * NY));
-    for (const [dx, dy, dz] of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) {
-      const X = x + dx, Y = y + dy, Z = z + dz; if (X < 0 || Y < 0 || Z < 0 || X >= NX || Y >= NY || Z >= NZ) continue;
-      const q = id(X, Y, Z); if (!g[q] && !vis[q]) { vis[q] = 1; st.push(q); }
-    }
-  }
-  for (let k = 0; k < g.length; k++) if (!g[k] && !vis[k]) g[k] = 1;
-  // v106: porte delle torri al piano del cortile. Nel modello il passaggio fra le due colonne di
+  // v106: porte delle torri al piano del cortile (v107: prima del riempimento). Nel modello il passaggio fra le due colonne di
   // legno e' vuoto (verificato), ma i voxel delle superfici accanto, gonfiati di mezzo passo, lo
   // stringevano sotto la larghezza del personaggio. Le colonne si trovano dal modello: vertici di
   // wood_dark fra 0,6 e 1,4 m nella fascia delle torri, raggruppati; due colonne per torre.
@@ -255,6 +286,55 @@ function collisioni(mats) {
       porte++;
     }
     console.log('porte delle torri liberate', porte); }
+  // riempimento dall'esterno (6-connesso) sui voxel vuoti.
+  // v107: i muri cavi non hanno fondo: l'aria di fuori entrava nell'intercapedine passando SOTTO il
+  // piano del cortile (la griglia scende fino a -0,7 m) e il riempimento non scattava: ~2 m d'aria
+  // dentro ogni muro, e rompendo la parete si entrava. Sotto y = 0 i voxel vuoti fanno da barriera
+  // (li' c'e' il terreno del gioco) ma non diventano pieni.
+  const vis = new Uint8Array(g.length); const st = [];
+  const sotto = (y) => o[1] + (y + 0.5) * s[1] < 0;
+  for (let z = 0; z < NZ; z++) for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) if (x === 0 || z === 0 || x === NX - 1 || z === NZ - 1 || y === NY - 1) { const k = id(x, y, z); if (!g[k] && !sotto(y)) { vis[k] = 1; st.push(k); } }
+  while (st.length) {
+    const k = st.pop(); const x = k % NX, y = Math.floor(k / NX) % NY, z = Math.floor(k / (NX * NY));
+    for (const [dx, dy, dz] of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) {
+      const X = x + dx, Y = y + dy, Z = z + dz; if (X < 0 || Y < 0 || Z < 0 || X >= NX || Y >= NY || Z >= NZ || sotto(Y)) continue;
+      const q = id(X, Y, Z); if (!g[q] && !vis[q]) { vis[q] = 1; st.push(q); }
+    }
+  }
+  const interno = new Uint8Array(g.length); let nInt = 0;
+  for (let z = 0; z < NZ; z++) for (let y = 0; y < NY; y++) { if (sotto(y)) continue; for (let x = 0; x < NX; x++) { const k = id(x, y, z); if (!g[k] && !vis[k]) { g[k] = 1; interno[k] = 1; nInt++; } } }
+  console.log('voxel interni riempiti', nInt);
+  // v107: tappi. Dove due voxel pieni di blocchi diversi si toccano e uno dei due e' interno al muro,
+  // il blocco interno riceve una faccia sul confine, rivolta verso l'altro: si vede solo quando
+  // l'altro blocco e' rotto (finche' c'e', sta chiusa dentro il muro). Rettangoli fusi per piano.
+  { const bl0 = (k) => idBlocco(o[0] + (k % NX + 0.5) * s[0], o[1] + (Math.floor(k / NX) % NY + 0.5) * s[1], o[2] + (Math.floor(k / (NX * NY)) + 0.5) * s[2]);
+    const piani = new Map();
+    const passi = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+    for (let k = 0; k < g.length; k++) {
+      if (!interno[k]) continue; const x = k % NX, y = Math.floor(k / NX) % NY, z = Math.floor(k / (NX * NY)), bk = bl0(k);
+      for (let ax = 0; ax < 3; ax++) for (const dir of [1, -1]) {
+        const X = x + passi[ax][0] * dir, Y = y + passi[ax][1] * dir, Z = z + passi[ax][2] * dir; if (X < 0 || Y < 0 || Z < 0 || X >= NX || Y >= NY || Z >= NZ) continue;
+        const q = id(X, Y, Z); if (!g[q]) continue; const bq = bl0(q); if (bq === bk) continue;
+        const ii = [x, y, z], pl = ii[ax] + (dir > 0 ? 1 : 0), ua = (ax + 1) % 3, va = (ax + 2) % 3;
+        const key = ax + '|' + pl + '|' + dir + '|' + bk; let m = piani.get(key); if (!m) piani.set(key, m = new Set());
+        m.add(ii[ua] + ',' + ii[va]);
+      }
+    }
+    // un confine di blocco sta a meno di mezzo voxel dal piano della griglia: lo aggancio al piano vero
+    const aggancia = (ax, v) => { const base = ax === 1 ? ZOCCOLO : BLOCCO0; const n = Math.round((v - base) / BLOCCO), p = base + n * BLOCCO; return Math.abs(p - v) <= s[ax] * 0.55 ? p : v; };
+    for (const [key, set] of piani) {
+      const [ax, pl, dir, bk] = key.split('|').map(Number), ua = (ax + 1) % 3, va = (ax + 2) % 3;
+      const cells = [...set].map((t) => t.split(',').map(Number)).sort((p, q) => p[1] - q[1] || p[0] - q[0]);
+      const left = new Set(set);
+      for (const [u, v] of cells) {
+        if (!left.has(u + ',' + v)) continue;
+        let u1 = u; while (left.has((u1 + 1) + ',' + v)) u1++;
+        let v1 = v; for (;;) { let ok = true; for (let uu = u; uu <= u1; uu++) if (!left.has(uu + ',' + (v1 + 1))) { ok = false; break; } if (!ok) break; v1++; }
+        for (let vv = v; vv <= v1; vv++) for (let uu = u; uu <= u1; uu++) left.delete(uu + ',' + vv);
+        CAPS.list.push({ b: bk, ax, dir, c: aggancia(ax, o[ax] + pl * s[ax]), u0: aggancia(ua, o[ua] + u * s[ua]), u1: aggancia(ua, o[ua] + (u1 + 1) * s[ua]), v0: aggancia(va, o[va] + v * s[va]), v1: aggancia(va, o[va] + (v1 + 1) * s[va]) });
+      }
+    }
+    CAPS.n = CAPS.list.length; }
   // fusione
   const used = new Uint8Array(g.length), boxes = [];
   // v106: blocco di ogni voxel (dal centro); la fusione non attraversa i confini dei blocchi

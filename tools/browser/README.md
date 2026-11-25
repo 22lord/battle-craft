@@ -14,7 +14,9 @@ npm i playwright-core@1.48.2      # node_modules è ignorato da git
 
 ## Uso
 
-Servire il gioco dalla radice della repo (in background):
+Servire il gioco dalla radice della repo (in background). Nella v107 `npx http-server` e' stato
+bloccato dai permessi (scarica un pacchetto): basta un server statico di 10 righe in Node con
+`http.createServer` + `fs.readFile` su 127.0.0.1:8123.
 
 ```
 npx --yes http-server -p 8123 -s -c-1 .
@@ -30,6 +32,9 @@ Poi:
   (`G.world.removeHarvestable(...)`) e guardare dentro.
 - **telefono** (v105): `node tools/browser/touch.cjs <cartella-uscita>` emula un telefono in
   orizzontale (844×390, tocco): joystick mobile, raccolta toccando, sensibilità del trascinamento.
+- **telefono v107**: `node tools/browser/touch107.cjs <cartella-uscita>`: tasti visibili in modalita'
+  armi e costruzione, tasto salto, visuale che non si ferma passando sopra i tasti o partendo da un
+  tasto, tocco sulla barra delle armi fuori dalla casella.
 - **partita vera**: `node tools/browser/partita.cjs <cartella-uscita>` clicca Gioca e
   scatta durante il lancio (bus, caduta, deltaplano, atterraggio). Stampa stato,
   posizione ed errori della console.
