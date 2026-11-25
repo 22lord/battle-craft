@@ -4,11 +4,11 @@ Documento di passaggio di consegne. Serve a riprendere in una chat nuova senza r
 da zero e senza rifare errori già pagati.
 
 Autore: Lorenzo Deda (@22lordd), Napoli.
-Stato al 25 novembre 2026: **battlecraft v108**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
+Stato al 25 novembre 2026: **battlecraft v109**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
 **fusi**: l'isola della vecchia "mappa" è il terreno della partita.
 
 Versione del contesto: v9. Le v94-v97 non sono mai arrivate in chat:
-le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8.
+le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8, v109 in 9.9.
 
 **Novità grossa della v103: il gioco adesso si può VEDERE renderizzato** (sezione 3.1), dal
 PC di Lorenzo, con la sua GPU. Molte frasi "non verificato a occhio" qui sotto si possono
@@ -49,7 +49,7 @@ ancora quella, ma adesso vive dentro il gioco.
    richiesta poggia su una diagnosi sbagliata, dirlo. Richiesta sua, testuale: «ogni volta
    che ti do sti comandi cerca di sviluppare un senso critico».
 4. **Ogni file consegnato va rinominato con un numero di versione progressivo**, mai lo
-   stesso nome due volte. La prossima è la **v109**. Nella repo il file si chiama `index.html` e la
+   stesso nome due volte. La prossima è la **v110**. Nella repo il file si chiama `index.html` e la
    versione sta in `VERSIONE`: le consegne fuori dalla repo restano `battlecraft-vNN.html`.
 5. Gli archivi del modello che ha fornito **non contengono licenza**: da verificare sul
    sito di origine prima di qualsiasi pubblicazione.
@@ -454,6 +454,18 @@ entro 5 mm dall'ancoraggio.
 28. **`hMin102` (quota piu' bassa) su un oggetto largo**: niente galleggiamento a valle, ma affonda a
     monte, e cio' che sta oltre il raggio controllato (le panche del fuoco a 2,4 m) resta sospeso.
     Per gli oggetti fissi meglio la piazzola (`piazzola107`).
+29. **Una quota "di serie" pensata per un modello vecchio**: i cespugli stavano a terreno + 0,25 x scala, giusto
+    per il cespuglio procedurale, sbagliato per il modello (base a y = 0): 17 cm per aria di mediana. Quando si
+    cambia un modello, cercare chi ne usa la quota.
+30. **Tappi del castello dai soli voxel interni**: la parete vera sta DENTRO il voxel di superficie, quindi fra
+    tappo e parete restava una fessura fino a 20 cm. Ora partono anche dai voxel di superficie attaccati
+    all'interno (v109).
+31. **Apostrofi nei testi dentro stringhe JS con apici singoli** (testo d'aiuto del controller): un "l'arma"
+    chiude la stringa e tutto il modulo non parte (SyntaxError = gioco nero). Il primo test che carica il
+    modulo lo dice subito: lanciarne almeno uno dopo ogni testo aggiunto.
+32. **Sulla porta 8123 puo' esserci gia' un server** lasciato da una sessione precedente (serve la repo, va
+    bene): un secondo server sulla stessa porta muore con EADDRINUSE. Per confrontare con una versione
+    vecchia usare un'altra porta.
 
 ---
 
@@ -900,6 +912,73 @@ il deltaplano (`harness.cjs`).
 Strumento che ha mentito: la prima soglia per i pezzi tagliati era "sotto 50 cm" e diceva "tolti"; il
 test che guarda i vertici (non le componenti) ha trovato la traversa alta, che parte da 62 cm.
 
+### 9.9 Cosa cambia nella v109
+
+Prima richiesta: un prompt generico scritto per Unity/Unreal (IPickupable, Audio Mixer, Sound Class) su
+raccolta di cure/munizioni/armi, scambio a slot pieni con lancio dell'arma, volume degli spari -25/35% con
+variazione di tono 0,95-1,05, bus audio delle armi. Detto a Lorenzo: metà c'era già (`Items`, cure bloccate a
+vita piena) e con 3 caselle fisse una per tipo lo scambio non poteva mai succedere. Sua risposta, testuale:
+«aggiungi man mano gli oggetti all inventario puoi anche dropparla ri raccoglierli. se ho un arma scarica e
+raccolgo quella piena ho 2 fucili d assalto nell inventario quello scarico e quello pieno. se con un arma in
+mano e l inventario pieno prendo un arma me la sostituisce. posso accumulare sempre più proiettili».
+Seconda richiesta (durante il lavoro): «quando rompo il muro del castello c'è ancora una fessura che mi fa
+vedere dentro al muro. i cespugli fluttuano leggermente» (screenshot `screen/` 25/11 16:48).
+
+**Inventario a caselle** (`INV109`, 5 caselle): `ch.inv[k] = { w, mag }` o null, `ch.slot` = casella scelta
+(può essere vuota), `ch.weapon` resta il tipo in mano (tutto il codice che lo legge non è cambiato). Spariti
+`ch.weapons` e `ch.mag`: il caricatore si legge da `ch.cur109().mag`. Metodi: `giveWeapon(w, riserva, mag, casella)`
+(torna la casella o -1), `svuota109`, `selectSlot109`, `selectWeapon(tipo)` (per bot e test: quella in mano o la
+più carica), `liberi109`, `magDi109`.
+- doppioni: ogni arma ha il suo caricatore; si spara e si ricarica solo quella in mano
+- raccogliere va nella casella scelta se è vuota, se no nella prima libera
+- pieno + arma in mano = **scambio**: la vecchia cade davanti col suo caricatore; pieno col piccone = non si
+  prende («Inventario pieno: prendi in mano l'arma da scambiare»). Il suggerimento dice «Scambia: … (lasci …)»
+- **butta l'arma**: tasto **H** (azione `drop`, rimappabile), D-pad ← fuori dalla costruzione, al telefono
+  **dito fermo 0,45 s su una casella** della barra (`tienePremuto109`). Un'arma buttata porta solo il suo
+  caricatore, niente munizioni di riserva (se no buttare e riprendere le moltiplicherebbe)
+- **munizioni senza tetto** (prima 999). I materiali restano a 999
+- alla morte cade tutto: ogni arma col suo caricatore + una scatola per tipo con tutta la riserva (prima: solo
+  l'arma in mano con 60 + 30 munizioni regalate)
+- tasti 1-5, rotella e barra (5 caselle + piccone, 52 px al telefono, la barra è larga 332 px su 844)
+- **bot**: non prendono doppioni e non scambiano (un bot sopra un'arma la scambierebbe all'infinito)
+
+**Raccolta modulare** (`RACCOLTA109`): una voce per `kind` di `ITEM_DEFS` con `puo`, `prendi`, `motivo`, `colore`.
+`Items.pickup` fa la parte comune: controllo, effetto, rimozione, suono, scritta, scintille del colore
+dell'oggetto (`FX.impact`). Le geometrie degli oggetti raccolti ora si liberano (prima restavano in memoria;
+quelle delle armi sono condivise e restano). Niente pooling: gli oggetti sono pochi, non serve.
+
+**Lancio a terra** (`Items.lancia109` / `vola109`): parte dal petto a 3,2 m/s avanti + 2,6 in su (+ metà della
+velocità di chi lancia), gravità 18, contro i muri si ferma (`clearLine`), rimbalza (`rimbalzo` 0,25) e si posa
+su terreno o strutture (`supportHeight`). In volo non si raccoglie. Misurato: si posa a ~1,8-2,6 m davanti.
+
+**Audio delle armi** (`AUDIO109`): bus `AudioSys.armi` (GainNode fra i suoni delle armi e il master) a **0,70**
+(-30%, ~-3 dB): spari (campione e ripiego sintetico), ricarica, colpo a vuoto. Cursore **«Volume armi»** nelle
+impostazioni (salvato in `baia_armi109`; muovendolo dal menu fa sentire uno sparo). Intonazione casuale a ogni
+sparo **0,95-1,05** (prima 0,982-1,018). Per regolare tutte le armi da un punto: `AUDIO109.armi` o
+`G.audio.setArmiVol(v)`. **Non ascoltato**: da far sentire a Lorenzo.
+
+**Castello: fessura nel muro rotto.** I tappi (v107) partivano solo dai voxel *interni* del muro, ma la parete
+vera sta dentro il voxel di superficie: fra tappo e parete restava una fessura fino a 20 cm, da cui si vedeva la
+parete interna scura. Ora partono anche dai voxel di superficie attaccati all'interno dello stesso blocco
+(`costruisci.cjs`). Tappi da ~4.800 a 5.645 rettangoli, collisioni identiche (18.446 scatole, 348 blocchi).
+Visto nel render, stesso punto prima/dopo: le due feritoie scure sono chiuse. Prezzo: dove la parete è storta
+il tappo sporge di qualche cm (gradino visibile solo a blocco rotto).
+
+**Cespugli che galleggiavano** (`quotaCespuglio109`): stavano a terreno + 0,25 x scala, giusto per il vecchio
+cespuglio procedurale, ma il modello ha la base a y = 0. Misurato (`cespugli109.cjs`): mediana **17 cm per
+aria**, 239 su 300 sopra 5 cm. Ora quota più bassa del terreno sul cerchio dei vertici bassi del modello, meno
+4 cm x scala; dove il terreno scende più di 0,4 x scala sotto il cerchio (dirupi, bordi di piazzola) il
+cespuglio non si mette (ne nascono altri altrove: sempre 300). Dopo: 0 sopra 5 cm sui tre semi, centro mai
+oltre 0,44 x scala sotto terra.
+
+Test nuovi: `v109.cjs` (inventario, scambio, butta/riprendi, munizioni, cure, morte, bot, bus audio con un finto
+AudioContext che segue i collegamenti), `cespugli109.cjs` (tre semi). `colpi107.cjs` e `tools/browser/touch107.cjs`
+aggiornati alla nuova API. Strumento nuovo `tools/browser/inv109.cjs` (barra su PC e telefono, H, pressione lunga,
+ripresa toccando: tutto provato in Edge). **Non provato**: telefono vero, l'audio.
+
+Strumento che ha mentito: la prima misura del "cespuglio sepolto" prendeva il vertice più affondato, che in
+pendenza è il lato a monte (deve affondare): dava -3 m e "falliva". La misura giusta è il centro.
+
 ### Cosa non è verificato (detto dal LEGGIMI stesso, e vero)
 
 - **nessuno ha visto la v93 renderizzata** tranne, eventualmente, Lorenzo
@@ -1099,4 +1178,7 @@ rampa e novanta, comandi del telefono (sezione 9.7).
 **v108**: deltaplano di Lorenzo con la vela che sventola, deltaplano cadendo da in alto, bus che
 galleggia, pali di staccionata tolti attorno al castello (sezione 9.8).
 
-**Prossima consegna: v109.**
+**v109**: inventario a caselle (armi doppie, scambio, butta e riprendi), raccolta modulare, munizioni
+senza tetto, bus audio delle armi, tappi del castello senza fessure, cespugli a terra (sezione 9.9).
+
+**Prossima consegna: v110.**

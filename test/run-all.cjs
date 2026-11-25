@@ -30,6 +30,10 @@ const test = [
   ['v107.cjs', []],
   ['colpi107.cjs', []],
   ['v108.cjs', []],
+  ['v109.cjs', []],
+  ['cespugli109.cjs', ['90210', 'check']],
+  ['cespugli109.cjs', ['123456', 'check']],
+  ['cespugli109.cjs', ['999', 'check']],
 ];
 
 let falliti = 0;

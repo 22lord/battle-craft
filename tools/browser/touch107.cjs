@@ -16,7 +16,7 @@ const { chromium } = require('playwright-core'); const path = require('path');
   await page.tap('#btnPlay');
   await page.waitForFunction(() => window.__game.state === 'playing' && window.__game.player, null, { timeout: 120000 });
   await page.evaluate(() => { const G = window.__game, p = G.player; p.air88 = null; p.pos.set(-60, 0, -8); p.pos.y = G.physics.supportHeight(-60, -8, 60); p.vel.set(0, 0, 0); G.cam.yaw = 0; G.cam.pitch = -0.1; for (const c of G.chars) if (c !== p) c.alive = false;
-    for (const w of ['ar', 'sg']) { p.weapons[w] = true; p.mag[w] = 10; } G.enterMode('weapon'); p.selectWeapon('ar'); G.hud.refreshHotbar(); });
+    for (const w of ['ar', 'sg']) { if (!p.hasWeapon(w)) p.giveWeapon(w, 0, 10); } G.enterMode('weapon'); p.selectWeapon('ar'); G.hud.refreshHotbar(); });
   await page.waitForTimeout(1200);
   const r = {};
   const vis = (a) => page.evaluate((a) => { const b = document.querySelector('#touch84 [data-action=' + a + ']'); const s = getComputedStyle(b); const q = b.getBoundingClientRect(); return s.display !== 'none' ? Math.round(q.width) : 0; }, a);

@@ -51,3 +51,11 @@ delle collisioni. Posizione e piazzola nel gioco: `CASTELLO105_POS` in `index.ht
   dell'isoletta (davanti alla porta, sotto la torre di sud-ovest). Dopo il filtro si tolgono le
   componenti connesse piccole (< 1,5 m), che partono sotto 1 m e stanno a piu' di 22,5 m dal centro.
   4 pezzi, 316 triangoli. Le pietre e le finestre delle torri (sopra 1,2 m) e l'edera restano
+
+## Cosa fa in piu' dalla v109
+
+- **tappi fino alla parete**: i tappi partivano solo dai voxel interni del muro, ma la parete vera sta dentro
+  il voxel di superficie: rotto un blocco, fra tappo e parete restava una fessura fino a 20 cm da cui si
+  vedeva dentro il muro. Ora partono anche dai voxel di superficie che toccano l'interno dello stesso blocco.
+  5.645 rettangoli (erano ~4.800), collisioni identiche (18.446 scatole, 348 blocchi). Dove la parete e' storta
+  il tappo puo' sporgere di qualche cm

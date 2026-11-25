@@ -310,8 +310,20 @@ function collisioni(mats) {
   { const bl0 = (k) => idBlocco(o[0] + (k % NX + 0.5) * s[0], o[1] + (Math.floor(k / NX) % NY + 0.5) * s[1], o[2] + (Math.floor(k / (NX * NY)) + 0.5) * s[2]);
     const piani = new Map();
     const passi = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+    // v109: anche i voxel di SUPERFICIE attaccati all'interno dello stesso blocco. Con i soli interni il
+    // tappo si fermava al primo voxel interno e fra il tappo e la parete vera (che sta dentro il voxel di
+    // superficie) restava una fessura fino a 20 cm: rotto il blocco accanto, si vedeva dentro il muro
+    // (screenshot di Lorenzo del 25/11). Prezzo: il tappo puo' sporgere fino a un voxel oltre la parete.
+    const bordo = new Uint8Array(g.length);
     for (let k = 0; k < g.length; k++) {
-      if (!interno[k]) continue; const x = k % NX, y = Math.floor(k / NX) % NY, z = Math.floor(k / (NX * NY)), bk = bl0(k);
+      if (!g[k] || interno[k]) continue; const x = k % NX, y = Math.floor(k / NX) % NY, z = Math.floor(k / (NX * NY)), bk = bl0(k);
+      for (const [dx, dy, dz] of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) {
+        const X = x + dx, Y = y + dy, Z = z + dz; if (X < 0 || Y < 0 || Z < 0 || X >= NX || Y >= NY || Z >= NZ) continue;
+        const q = id(X, Y, Z); if (interno[q] && bl0(q) === bk) { bordo[k] = 1; break; }
+      }
+    }
+    for (let k = 0; k < g.length; k++) {
+      if (!interno[k] && !bordo[k]) continue; const x = k % NX, y = Math.floor(k / NX) % NY, z = Math.floor(k / (NX * NY)), bk = bl0(k);
       for (let ax = 0; ax < 3; ax++) for (const dir of [1, -1]) {
         const X = x + passi[ax][0] * dir, Y = y + passi[ax][1] * dir, Z = z + passi[ax][2] * dir; if (X < 0 || Y < 0 || Z < 0 || X >= NX || Y >= NY || Z >= NZ) continue;
         const q = id(X, Y, Z); if (!g[q]) continue; const bq = bl0(q); if (bq === bk) continue;

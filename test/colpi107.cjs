@@ -51,8 +51,8 @@ const { load, THREE: T } = require('./harness.cjs'); const assert = require('ass
     b.hp = 100; b.shield = 50; h.reset(); h.pen = 0.5; b.takeDamage(20, p, h); r.perfora50 = { scudo: h.shieldDmg, vita: h.hpDmg }; }
   // 5. sparo vero col fucile: mira al torace, scudo 5 -> si rompe; poi uccisione
   const mira = (pt) => { const e = p.eye(); return pt.clone().sub(e).normalize(); };
-  const fuoco = (w, pt) => { p.weapon = w; p.weapons[w] = true; p.mag[w] = 5; p.fireCd = 0; p.reloading = false; p.mode = 'weapon'; p.recoil = 0; p.ads = true; p.vel.set(0, 0, 0);
-    const d = mira(pt); let ok = false; for (let k = 0; k < 12 && !ok; k++) { p.fireCd = 0; p.mag[w] = 5; const hp0 = b.hp + b.shield; G.combat.tryFire(p, p.eye(), d); ok = b.hp + b.shield < hp0 || !b.alive; } return ok; };
+  const fuoco = (w, pt) => { if (!p.hasWeapon(w)) p.giveWeapon(w); p.mode = 'weapon'; p.selectWeapon(w); p.cur109().mag = 5; p.fireCd = 0; p.reloading = false; p.mode = 'weapon'; p.recoil = 0; p.ads = true; p.vel.set(0, 0, 0);
+    const d = mira(pt); let ok = false; for (let k = 0; k < 12 && !ok; k++) { p.fireCd = 0; p.cur109().mag = 5; const hp0 = b.hp + b.shield; G.combat.tryFire(p, p.eye(), d); ok = b.hp + b.shield < hp0 || !b.alive; } return ok; };
   b.hp = 100; b.shield = 5; b.alive = true; b.animate(1 / 60);
   const pt = wp(m.hips).lerp(wp(m.chest), 0.7); fuoco('ar', pt);
   const e1 = G.combat.esito107; r.sparoFucile = { colpi: e1.colpi, danno: e1.danno, scudoRotto: e1.scudoRotto, marker: e1.marker() };
