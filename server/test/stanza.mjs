@@ -106,7 +106,8 @@ try {
   const token = rb.reconnectionToken, idB = rb.sessionId;
   rb.reconnection.enabled = false;
   rb.connection.transport.ws ? rb.connection.transport.ws.close() : rb.connection.close();
-  await finche(() => ra.state.giocatori.get(idB) && ra.state.giocatori.get(idB).connesso === false);
+  // in locale e' immediato; dietro il proxy di Render (misurato) ~10 s: se ne accorge il ping di Colyseus
+  await finche(() => ra.state.giocatori.get(idB) && ra.state.giocatori.get(idB).connesso === false, 20000);
   prova('A vede B disconnesso (posto tenuto)', ra.state.giocatori.get(idB)?.connesso === false);
   const B2 = new Client(url); const rb2 = await B2.reconnect(token);
   await finche(() => ra.state.giocatori.get(idB)?.connesso === true);

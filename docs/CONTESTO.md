@@ -1398,8 +1398,12 @@ solo se la pagina stessa è aperta in locale > nessuno.
 (`COLYSEUS_LATENCY=150`): da fermo l'altro è dove è (< 5 cm), in corsa lo scarto è quello di latenza + ritardo, il salto si
 vede (> 0,8 m), accovacciamento/piccone/arma/rotazione arrivano, 0 correzioni del server nel gioco normale, riconnessione
 automatica dopo un WebSocket chiuso di colpo. Scatti in `screen/online116/`.
-**Non visto**: due PC veri via Internet (serve la pubblicazione: account Vercel/Render di Lorenzo), telefono, un ping alto e
-irregolare vero. **L'aspetto dell'altro è uguale al proprio** (stesso modello; la palette non cambia il modello esterno): li
+**Pubblicato il 26/11/2026**: gioco su **https://battlecraft-blush.vercel.app/**, server su **https://battlecraft-server.onrender.com**
+(Render free; `BATTLECRAFT_SERVER_URL=wss://battlecraft-server.onrender.com` su Vercel). Provato DA QUI contro quelli veri:
+`server/test/stanza.mjs wss://battlecraft-server.onrender.com` 31/31 e `online116.cjs` sul link di Vercel 27/27 (ping ~200 ms:
+il servizio Render sta in America, regione di serie). Dietro il proxy di Render una disconnessione si vede dopo **~10 s**
+(la nota il ping di Colyseus), in locale subito. Scatti in `screen/online116-pubblicato/`.
+**Non visto**: due PC in due case diverse, telefono. **L'aspetto dell'altro è uguale al proprio** (stesso modello; la palette non cambia il modello esterno): li
 distingue il nome.
 
 **Fasi successive** (in ordine): danni fra giocatori con colpi validati dal server; bus/tempesta condivisi; costruzioni e
