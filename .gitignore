@@ -8,3 +8,4 @@ node_modules/
 # uscite dei test e versioni numerate di prova
 test/out/
 battlecraft-v*.html
+dist/

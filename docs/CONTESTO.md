@@ -4,11 +4,11 @@ Documento di passaggio di consegne. Serve a riprendere in una chat nuova senza r
 da zero e senza rifare errori già pagati.
 
 Autore: Lorenzo Deda (@22lordd), Napoli.
-Stato al 26 novembre 2026: **battlecraft v115**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
+Stato al 26 novembre 2026: **battlecraft v116**, un solo file HTML (`index.html` nella repo) + il **server multiplayer** in `server/` (sezione 9.16, guida in `docs/ONLINE.md`). Gioco e isola sono
 **fusi**: l'isola della vecchia "mappa" è il terreno della partita.
 
-Versione del contesto: v11. Le v94-v97 non sono mai arrivate in chat:
-le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8, v109 in 9.9, v110 in 9.10, v111 in 9.11, v112 in 9.12, v113 in 9.13, v114 in 9.14, v115 in 9.15.
+Versione del contesto: v12. Le v94-v97 non sono mai arrivate in chat:
+le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8, v109 in 9.9, v110 in 9.10, v111 in 9.11, v112 in 9.12, v113 in 9.13, v114 in 9.14, v115 in 9.15, v116 in 9.16.
 
 **Dalla v110 la grafica procede a fasi** (prompt in `docs/PROMPT-GRAFICA.md`, una fase per sessione, piano
 prima e ok di Lorenzo). Fatte: **fase 1 (luce, cielo, post-processing)** e **fase 2 (materiali e texture,
@@ -53,10 +53,11 @@ ancora quella, ma adesso vive dentro il gioco.
    richiesta poggia su una diagnosi sbagliata, dirlo. Richiesta sua, testuale: «ogni volta
    che ti do sti comandi cerca di sviluppare un senso critico».
 4. **Ogni file consegnato va rinominato con un numero di versione progressivo**, mai lo
-   stesso nome due volte. La prossima è la **v116**. Nella repo il file si chiama `index.html` e la
+   stesso nome due volte. La prossima è la **v117**. Nella repo il file si chiama `index.html` e la
    versione sta in `VERSIONE`: le consegne fuori dalla repo restano `battlecraft-vNN.html`.
-5. Gli archivi del modello che ha fornito **non contengono licenza**: da verificare sul
-   sito di origine prima di qualsiasi pubblicazione.
+5. **Il modello del personaggio l'ha fatto Lorenzo con Meshy** (detto da lui il 26/11/2026, v116): non viene da un sito
+   di terzi, la questione licenza è chiusa. (Meshy: col piano gratuito i modelli escono in CC BY 4.0, cioè va citato
+   Meshy; coi piani a pagamento sono dell'utente.)
 6. Tono: diretto, colloquiale, niente professorino, niente complimenti di circostanza.
    Se sbaglia, dirglielo. Risposte corte dove si può.
 7. Mondo **cartoon, stile del riferimento**: colori pieni, forme leggibili da lontano,
@@ -277,6 +278,8 @@ test/v110.cjs               v110: curva, nebbia, livelli di qualità, ciclo del 
 test/v111.cjs               v111: sparo automatico, finestra del nome, scritta della versione
 test/v112.cjs               v112: tappi del castello (spenti, si accendono rompendo, si rispengono), UV nel mondo, ripiego senza GPU
 test/v115.cjs               v115: auto (modello, colori, tetti, sentieri e case, piano, collisioni, porte, piccone)
+test/v116.cjs               v116: indirizzo del server, solitario invariato, partita online, l'altro giocatore (stanza finta)
+server/test/stanza.mjs      v116: regole del server + DUE CLIENT VERI via WebSocket (cd server && npm test; non e' in run-all: serve npm install)
 test/v114.cjs               v114: estrazione per rarità, forziere (modello, piazzamento, raggio, una volta sola, bottino, danno), medikit
 ```
 
@@ -302,6 +305,10 @@ tools/forziere114/prepara.cjs [in.glb] [out.glb]       v114: forziere di Lorenzo
 tools/patch114/                                        la patch della v114 (forzieri.js, applica.cjs)
 tools/macchina115/prepara.cjs [in.obj] [out.glb]       v115: auto di Lorenzo da OBJ a GLB in 3 pezzi (colori, semplificazione)
 tools/patch115/                                        la patch della v115 (auto.js, strade.js, applica.cjs)
+tools/patch116/                                        la patch della v116 (rete.js, applica.cjs)
+tools/browser/statico.cjs [porta] [cartella]           server statico in Node (8123 = repo, 8124 dist = come su Vercel)
+tools/browser/online116.cjs <out> [url] [server]       v116: DUE Edge separati nella stessa stanza, 27 controlli + scatti da tutti e due
+tools/vercel/prepara.cjs                               v116: dist/index.html con l'indirizzo del server (BATTLECRAFT_SERVER_URL), rifiuta localhost
 ```
 
 Tempi: ~10 minuti in tutto sul banco di prova del cloud.
@@ -535,6 +542,20 @@ entro 5 mm dall'ancoraggio.
 43. **Testo e patch passati alla shell dentro `node -e "..."`**: gli escape `\n` diventano a capo veri (la stringa JS si
     rompe, successo due volte con `applica.cjs`) e i backtick vengono ESEGUITI come comandi (successo scrivendo proprio
     questa trappola: sparivano i nomi fra backtick). Patch e documenti si scrivono con Write/Edit, come dice la 19.
+    (Ripagata nella v116 con `node -e` e con un heredoc `<<'EOF'` dentro Bash: script di modifica SEMPRE come file.)
+44. **Colyseus 0.18 / @colyseus/schema 5: i campi dello schema si dichiarano con `t.string()`, `t.float32()`, `t.map(X)`**
+    dentro `schema({...})`. Le stringhe `'string'` delle versioni vecchie (e degli esempi in rete) fanno crollare il server all'avvio.
+45. **Un campo dello schema mai scritto arriva al client `undefined`**, non 0: interpolato diventa NaN, e un NaN nella posa fa
+    saltare l'IK delle braccia (`armOutside77`: `best` resta null, errore a ogni fotogramma). Il server riempie tutti i campi
+    all'entrata e il client ripulisce con `n0()`.
+46. **In rete i pacchetti si datano all'INVIO, non all'arrivo.** Via Internet arrivano a grappoli: datati all'arrivo, due finivano
+    sullo stesso istante e con 150 ms di latenza simulata il salto visto dall'altro perdeva il 60% dell'altezza. Ogni stato
+    porta `ts` (orologio del mittente); il client lo porta sul suo orologio con lo scarto minimo, il server misura i passi su `ts`
+    ma col guinzaglio del suo orologio (niente tempo dichiarato in anticipo, niente tempo accumulato stando zitti).
+47. **Alla riconnessione il client rimanda `inGioco = true`**: il server rimetteva il giocatore allo spawn e poi lo correggeva
+    (2,5 m indietro). Lo spawn si rifà solo nel passaggio lobby → partita.
+48. **Server lasciati accesi in background** (2567 Colyseus, 8123/8124 statici): per riavviare col codice nuovo va ucciso il
+    processo sulla porta (`netstat -ano | grep :2567`, poi `taskkill //PID n //F`), se no il nuovo muore con EADDRINUSE.
 
 ---
 
@@ -1332,6 +1353,58 @@ porte, collisione che contiene la carrozzeria, piccone.
 verde lime accanto a una casa di mattoni, grigia accanto a una casa col portico. Non visto: auto distrutta col piccone in
 partita, telefono.
 
+### 9.16 Cosa cambia nella v116 — multiplayer online (2 giocatori, Colyseus)
+
+Richiesta di Lorenzo: giocare con un amico aprendo un link, senza LAN né download; stanze con codice, 2 giocatori,
+posizioni/rotazioni/animazioni/telecamera sincronizzate, nomi, disconnessioni e riconnessioni, spawn diversi; il server
+responsabile dello stato condiviso e che valida gli input; **niente sistema di movimento alternativo, niente modelli nuovi,
+niente grafica toccata**; pagina su Vercel, server a parte, indirizzi da variabili d'ambiente, niente localhost online.
+Guida completa (uso, pubblicazione, test): **`docs/ONLINE.md`**.
+
+**Architettura.** Server **Colyseus 0.18.12** in `server/` (Node ESM, niente build): `src/index.js` (porta da `PORT`,
+`ORIGINI_CONSENTITE` facoltativa per il CORS), `src/StanzaBattle.js` (stanza, schema `Giocatore`/`StatoStanza`),
+`src/regole.js` (limiti e validazione, funzioni pure: le prova `test/stanza.mjs`). Il **codice stanza È il roomId**
+(4 caratteri senza 0/O/1/I): l'amico entra con `joinById`. `maxClients = 2`, patch a 20 Hz.
+Nel gioco: classe **`Rete116`** (patch `tools/patch116/`), il client `@colyseus/sdk@0.18.10` si scarica da jsdelivr **solo
+quando si preme Crea stanza / Entra** (il solitario non carica niente in più).
+
+**Perché funziona senza toccare movimento e animazioni.** `Character.animate()` ricava tutto (camminata, corsa, salto,
+atterraggio, accovacciamento, idle, arma) da `vel`, `onGround`, `yaw`, `crouch90/crouchK90`, `ads`, `mode/weapon`. Il mio
+client muove il giocatore con `applyMovement` + `Physics` come sempre e manda questi valori 20 volte al secondo; l'altro è un
+`Character` normale senza cervello (`remoto116`, modello pieno con `opts.eroe116`) a cui do i valori interpolati con 120 ms
+di ritardo. `Rete116.update` gira nel ciclo PRIMA di `update()`, così è in posa prima di `animate`.
+
+**Validazione sul server** (`validaStato`): numeri finiti, dentro la mappa, passo orizzontale ≤ corsa × 1,35 × dt + 0,6 m,
+salita ≤ 9 m/s × dt + 0,8, caduta ≤ 60 m/s, primo stato vicino allo spawn, ts che avanza, orologio al guinzaglio
+(±750 ms), secchiello di 12 messaggi a 30/s. Se un movimento non va: `correggi` → il client torna all'ultima posizione buona.
+Il server **non** rifà la fisica del mondo (servirebbe far girare l'isola intera in Node): controlla che ogni movimento
+dichiarato sia possibile. Da riconsiderare quando ci saranno i danni.
+
+**Partita online** (`Rete116.startMatch`, chiamata da `startMatch` se si è in stanza): **niente bot, bus, tempesta, bottino e
+forzieri** (andrebbero fuori sincronia), fucile in mano. Spawn **(-42, 40)** e **(-40, 50)**: cercati con una griglia a 2 m
+sulla mappa vera (in piano, nessuna collisione entro 3,5 m, fuori dalla città); i primi scelti stavano sotto un portico.
+Tornando in lobby si resta nella stanza (`inGioco = false`: l'altro sparisce dalla mappa); Esci la lascia.
+Riconnessione: l'SDK riprova da solo, il server tiene il posto 30 s (`allowReconnection`), il token sta in `sessionStorage`
+(anche ricaricando la pagina si rientra). Etichetta col nome sopra la testa (sprite), grigia con "(…)" in riconnessione.
+In partita, in alto: `ONLINE · STANZA K7Q2 · 2/2 · ping`.
+
+**Pubblicazione**: `vercel.json` (build `tools/vercel/prepara.cjs` → `dist/index.html` col meta `battlecraft-server` riempito
+da `BATTLECRAFT_SERVER_URL`; rifiuta variabile mancante e localhost), `.vercelignore` (solo la pagina), `render.yaml`
+(server su Render, piano free che si addormenta). Ordine dell'indirizzo del server nella pagina: `?server=` > meta > localhost
+solo se la pagina stessa è aperta in locale > nessuno.
+
+**Misurato** (`tools/browser/online116.cjs`, due Edge headless separati + server vero): 27/27, anche sulla versione
+"pubblicata" (`dist/` con l'indirizzo nel meta e `ORIGINI_CONSENTITE` attiva) e con **150 ms di latenza simulata**
+(`COLYSEUS_LATENCY=150`): da fermo l'altro è dove è (< 5 cm), in corsa lo scarto è quello di latenza + ritardo, il salto si
+vede (> 0,8 m), accovacciamento/piccone/arma/rotazione arrivano, 0 correzioni del server nel gioco normale, riconnessione
+automatica dopo un WebSocket chiuso di colpo. Scatti in `screen/online116/`.
+**Non visto**: due PC veri via Internet (serve la pubblicazione: account Vercel/Render di Lorenzo), telefono, un ping alto e
+irregolare vero. **L'aspetto dell'altro è uguale al proprio** (stesso modello; la palette non cambia il modello esterno): li
+distingue il nome.
+
+**Fasi successive** (in ordine): danni fra giocatori con colpi validati dal server; bus/tempesta condivisi; costruzioni e
+raccolta; oggetti a terra e forzieri.
+
 ### Cosa non è verificato (detto dal LEGGIMI stesso, e vero)
 
 - **nessuno ha visto la v93 renderizzata** tranne, eventualmente, Lorenzo
@@ -1365,7 +1438,7 @@ v70 e la v92**: verificare nel codice prima di ripartire.
   `map_wheel_cab3_01_BaseColor.png`, in `F:\Downloads\AM_cab3\SALE_textures\` sul suo PC
   (alla v69 mai applicate; verificare nella v93)
 - contorno: `CONTORNO.spessore = 0.026`, verificare che i colpi facciano ancora danno ai bot
-- **licenza del modello**: da verificare prima di qualsiasi pubblicazione
+- ~~licenza del modello~~: chiusa, il modello l'ha fatto Lorenzo con Meshy (vincolo 5)
 - correggere la riga del LEGGIMI che nomina il riferimento (vincolo 1)
 
 ### Il prossimo passo logico
@@ -1373,8 +1446,7 @@ v70 e la v92**: verificare nel codice prima di ripartire.
 Con la sezione 3.1 molto si guarda da soli. Restano a Lorenzo: **l'audio** (suoni del
 lancio v99, spari direzionali), **il telefono** (iPhone v101, mira assistita v100) e il
 giudizio sulla **naturalezza del movimento** (accovacciato v103 compreso). Da chiedergli:
-dove sono finite le texture dell'auto (`F:\` non esiste sul PC attuale) e da che sito
-viene il modello (licenza).
+dove sono finite le texture dell'auto (`F:\` non esiste sul PC attuale).
 
 Candidati per la prossima sessione, guardando i render: il DOPO della prova grafica nella
 partita normale (adesso si può confrontare a occhio), la rete stesa del villaggio, il
@@ -1553,4 +1625,7 @@ portare (3, tasto T, +50 in 2 s) (sezione 9.14).
 **v115**: le auto di Lorenzo al posto delle vecchie, un colore per auto, 10 auto in più lungo i sentieri e accanto alle case (13 in tutto)
 (sezione 9.15).
 
-**Prossima consegna: v116** (fase grafica 3: geometria e dettagli del mondo).
+**v116**: multiplayer online — server Colyseus in `server/`, stanze da 2 con codice e link, l'altro giocatore animato dal sistema
+esistente, nomi, riconnessione, validazione sul server, pubblicazione Vercel + Render (sezione 9.16, `docs/ONLINE.md`).
+
+**Prossima consegna: v117** (multiplayer fase 2: danni fra giocatori; oppure fase grafica 3: geometria e dettagli del mondo).

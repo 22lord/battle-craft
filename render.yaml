@@ -1,0 +1,16 @@
+# Server multiplayer su Render (Blueprint): New + > Blueprint > questa repo.
+# Il piano free si addormenta dopo 15 minuti senza visite: la prima connessione puo' metterci ~1 minuto.
+services:
+  - type: web
+    name: battlecraft-server
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: ORIGINI_CONSENTITE
+        sync: false   # l'indirizzo del gioco su Vercel, es. https://battlecraft.vercel.app

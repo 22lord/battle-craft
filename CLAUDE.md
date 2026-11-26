@@ -12,6 +12,8 @@ pagate, stato attuale. È la memoria del progetto.
 
 - Il gioco è **un solo file**: `index.html` (~17 MB, modelli/suoni incorporati). Il sorgente
   è l'HTML stesso: non esistono sorgenti divisi né build.
+- Dalla v116 c'è anche il **server multiplayer** in `server/` (Colyseus, Node; `cd server && npm test`).
+  Come funziona e come si pubblica (Vercel + Render): `docs/ONLINE.md`.
 - La versione attuale sta in `VERSIONE`: aggiornala a ogni versione nuova.
 - Test: `node test/run-all.cjs` (circa 10 minuti, solo Node, niente `npm install`).
   I test non vedono la grafica: luci, colori e movimenti si verificano giocando.

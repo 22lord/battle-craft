@@ -1,0 +1,15 @@
+# A Vercel servono solo index.html e lo script che lo prepara (tools/vercel/prepara.cjs)
+*.glb
+*.obj
+*.jpg
+*.png
+*.webp
+screen/
+test/
+server/
+assets/
+docs/
+node_modules/
+dist/
+tools/*
+!tools/vercel/

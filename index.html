@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="Battlecraft">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#0b1623">
+<meta name="battlecraft-server" content="">
 <title>BATTLECRAFT</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
@@ -51,6 +52,12 @@
 #profName{cursor:pointer}
 #profName:hover{color:var(--y)}
 #tab-settings input[type=text]{font:inherit;font-size:16px;background:#0b1f42;border:1px solid #2a4a7c;color:#fff;border-radius:6px;padding:5px 9px;width:170px}
+#online116{background:var(--panel);border:2px solid rgba(255,255,255,.14);border-bottom:0;border-radius:10px 10px 0 0;padding:10px 12px;display:flex;flex-direction:column;gap:7px;backdrop-filter:blur(4px)}
+#online116 .o116r{display:flex;gap:6px}#online116 .o116r .sbtn{flex:1;padding:7px 8px;font-size:14px}#online116 .sbtn:disabled{opacity:.45;cursor:default}
+#o116codice{width:96px;flex:0 0 96px;font:inherit;font-weight:800;letter-spacing:3px;text-align:center;text-transform:uppercase;padding:6px;border-radius:6px;border:1px solid #5a7a99;background:#0d1d30;color:#fff}
+#o116info{font-size:13px;line-height:1.45;color:#cfe3ff;min-height:18px}#o116info b{color:#fff}#o116info .o116cod{color:var(--y);letter-spacing:2px;font-size:16px}#o116info .o116p{padding:4px 8px;font-size:12px;margin-top:4px}#o116info .o116esci{background:linear-gradient(180deg,#ffb0a0,#e8664a);box-shadow:0 3px 0 #8f3a1c}
+#readyBox .mode{border-radius:0}
+#rete116{position:fixed;top:8px;left:50%;transform:translateX(-50%);display:none;padding:4px 12px;border-radius:6px;background:rgba(8,18,40,.62);color:#cfe3ff;font-size:12px;letter-spacing:1px;pointer-events:none;z-index:11;white-space:nowrap}
 #ver{position:fixed;left:12px;bottom:8px;font-size:11px;color:#6f8ab5;letter-spacing:1px;pointer-events:none}
 body.compact #cdnNote{display:none}
 /* Su schermo stretto il riquadro delle sfide copriva la testa del personaggio e il
@@ -393,6 +400,7 @@ window.loadingSlow91=setTimeout(function(){if(document.getElementById('loading91
 
 <canvas id="game" tabindex="0"></canvas>
 
+<div id="rete116"></div>
 <div id="hud" class="hidden">
   <div id="fps"></div>
   <div id="dbg"></div>
@@ -440,7 +448,7 @@ window.loadingSlow91=setTimeout(function(){if(document.getElementById('loading91
 <div id="title">
   <div class="topbar">
     <div class="logo"><span class="logoImg" role="img" aria-label="Battlecraft"></span></div>
-  <div id="ver">v115</div>
+  <div id="ver">v116</div>
     <div class="tabs" id="tabs"><button data-tab="play" class="on">Gioca</button><button data-tab="locker">Armadietto</button><button data-tab="controls">Comandi</button><button data-tab="settings">Impostazioni</button></div>
     <div class="profile"><div class="av" id="profAv">22</div><div><span id="profName" title="Clicca per cambiare nome">@22lordd</span><small id="profLv">LIVELLO 1</small></div></div>
   </div>
@@ -482,7 +490,8 @@ window.loadingSlow91=setTimeout(function(){if(document.getElementById('loading91
     <button class="sbtn arrow" id="lockPrev">◀</button><div class="nm x" id="lockName">Amy Danger</div><button class="sbtn arrow" id="lockNext">▶</button>
   </div>
   <div class="card" id="readyBox">
-    <div class="mode x"><small>MODALITÀ</small><div>Solo</div></div>
+    <div id="online116"><div class="o116r"><button class="sbtn" id="o116crea">Crea stanza</button></div><div class="o116r"><input id="o116codice" type="text" maxlength="4" spellcheck="false" autocomplete="off" placeholder="CODICE" aria-label="Codice stanza"><button class="sbtn" id="o116entra">Entra</button></div><div id="o116info">Gioca con un amico: crea una stanza e mandagli il link.</div></div>
+    <div class="mode x"><small>MODALITÀ</small><div id="modoNome116">Solo</div></div>
     <button class="ready" id="btnPlay">Gioca</button>
   </div>
   <div id="cdnNote">Serve una connessione internet al primo avvio per scaricare Three.js dalla CDN.</div>
@@ -5718,7 +5727,7 @@ class Character {
     this.weapon = null; this.mode = 'weapon';   // weapon = tipo dell'arma nella casella scelta (null se vuota)
     this.fireCd = 0; this.reloading = false; this.reloadT = 0; this.reloadTotal = 1; this.ads = false; this.recoil = 0; this.kick = 0;
     this.swingT = 0; this.animT = 0; this.lastDamageT = -10; this.lastAttacker = null; this.brain = null; this.wantJump = false; this.moving = false;
-    this.model = buildCharacterModel(opts.colors || PALETTES[0], !!opts.isPlayer); G.scene.add(this.model.group);
+    this.model = buildCharacterModel(opts.colors || PALETTES[0], !!(opts.isPlayer || opts.eroe116)); G.scene.add(this.model.group);
     /* Le armi vanno sull'attacco della MANO quando ci sono le clip: e' la mano che
        tiene il fucile, non il petto. Col vecchio attacco al torace erano le braccia a
        inseguire l'arma, e l'animazione del busto spariva sotto l'IK. */
@@ -9238,6 +9247,273 @@ function registraUv112() {
 
 Object.assign(window, { uvMondo112, registraUv112, scambia112, materiali112 });   // per i test
 
+/* ============================================================
+   v116: MULTIPLAYER ONLINE (server Colyseus, cartella server/)
+   Il movimento resta quello del gioco (applyMovement + Physics): il client manda il suo
+   stato ~20 volte al secondo, il server lo controlla (velocita', salti, confini) e lo
+   gira all'altro. L'altro giocatore e' un Character normale senza cervello: gli do
+   posizione, velocita', yaw, a terra / accovacciato / mira / arma interpolati, e le
+   animazioni (camminata, corsa, salto, accovacciamento, idle) le ricava animate() come
+   per tutti. Il client di rete si scarica solo quando si sceglie di giocare online.
+   ============================================================ */
+const RETE116 = {
+  sdk: 'https://cdn.jsdelivr.net/npm/@colyseus/sdk@0.18.10/dist/colyseus.js',
+  invioMs: 50,        // 20 stati al secondo
+  ritardoMs: 120,     // l'altro si vede 120 ms nel passato: c'e' sempre un pacchetto prima e uno dopo
+  pingMs: 2000,
+  buffer: 40,
+};
+/* Indirizzo del server: ?server=... (prove) > <meta name="battlecraft-server"> (lo scrive la
+   pubblicazione su Vercel dalla variabile BATTLECRAFT_SERVER_URL) > localhost solo se la pagina
+   stessa e' aperta in locale. Nella versione pubblicata localhost non entra mai. */
+function indirizzoServer116() {
+  try { const q = new URLSearchParams(location.search).get('server'); if (q) return q; } catch (e) { }
+  try { const m = document.querySelector('meta[name="battlecraft-server"]'); const v = m && typeof m.content === 'string' ? m.content.trim() : ''; if (v && v.indexOf('%') < 0) return v; } catch (e) { }
+  const h = typeof location !== 'undefined' ? location.hostname : undefined;
+  if (typeof location !== 'undefined' && (location.protocol === 'file:' || h === 'localhost' || h === '127.0.0.1')) return 'ws://localhost:2567';
+  return null;
+}
+function caricaSdk116() {
+  if (window.Colyseus && window.Colyseus.Client) return Promise.resolve(window.Colyseus);
+  if (RETE116._p) return RETE116._p;
+  return (RETE116._p = new Promise((ok, ko) => {
+    const s = document.createElement('script'); s.src = RETE116.sdk; s.async = true; s.crossOrigin = 'anonymous';
+    s.onload = () => (window.Colyseus && window.Colyseus.Client ? ok(window.Colyseus) : ko(new Error('client di rete non valido')));
+    s.onerror = () => { RETE116._p = null; ko(new Error('non riesco a scaricare il client di rete')); };
+    document.head.appendChild(s);
+  }));
+}
+function codice116(c) { return String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4); }
+const angolo116 = (a, b, t) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return a + d * t; };
+/* Etichetta col nome sopra la testa: sprite con una texture di testo, sempre rivolta alla telecamera. */
+function targhetta116(testo, spento) {
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const x = cv.getContext('2d');
+  x.clearRect(0, 0, 256, 64); x.font = 'bold 34px "Segoe UI",Arial,sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.lineWidth = 7; x.strokeStyle = 'rgba(0,0,0,.85)'; x.strokeText(testo, 128, 34); x.fillStyle = spento ? '#9aa3ad' : '#ffffff'; x.fillText(testo, 128, 34);
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false, fog: false }));
+  s.scale.set(1.7, 0.425, 1); s.renderOrder = 20; s.userData.testo116 = testo + (spento ? '#' : ''); return s;
+}
+function liberaTarghetta116(s) { if (!s) return; if (s.parent) s.parent.remove(s); if (s.material) { if (s.material.map) s.material.map.dispose(); s.material.dispose(); } }
+
+class Rete116 {
+  constructor(G) {
+    this.G = G; this.client = null; this.room = null; this.benv = null; this.remoti = new Map();
+    this.inviaT = 0; this.pingT = 0; this.rtt = 0; this.occupato = false; this.badgeT = 0; this.corrette = 0;
+    const $ = (id) => document.getElementById(id);
+    this.el = { box: $('online116'), crea: $('o116crea'), entra: $('o116entra'), codice: $('o116codice'), info: $('o116info'), modo: $('modoNome116'), badge: $('rete116') };
+    if (this.el.crea && this.el.crea.addEventListener) this.el.crea.addEventListener('click', () => this.crea());
+    if (this.el.entra && this.el.entra.addEventListener) this.el.entra.addEventListener('click', () => this.entra(this.el.codice.value));
+    if (this.el.codice && this.el.codice.addEventListener) {
+      this.el.codice.addEventListener('input', () => { this.el.codice.value = codice116(this.el.codice.value); });
+      this.el.codice.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') this.entra(this.el.codice.value); });
+    }
+    try { const q = codice116(new URLSearchParams(location.search).get('stanza')); if (q && this.el.codice) { this.el.codice.value = q; this.scrivi(`Invito alla stanza <b>${q}</b>: premi Entra.`); } } catch (e) { }
+    this.aggiornaUI();
+  }
+  attiva() { return !!this.room; }
+  scrivi(html) { if (this.el.info) this.el.info.innerHTML = html; }
+  linkStanza() { try { const u = new URL(location.href); u.searchParams.set('stanza', this.room.roomId); u.searchParams.delete('server'); const s = new URLSearchParams(location.search).get('server'); if (s) u.searchParams.set('server', s); return u.toString(); } catch (e) { return ''; } }
+  aggiornaUI() {
+    const r = this.room, n = r && r.state && r.state.giocatori ? r.state.giocatori.size : 0;
+    if (this.el.modo) this.el.modo.textContent = r ? 'Online ' + n + '/2' : 'Solo';
+    if (this.el.crea) this.el.crea.disabled = !!r || this.occupato;
+    if (this.el.entra) this.el.entra.disabled = !!r || this.occupato;
+    if (this.el.codice) this.el.codice.disabled = !!r;
+    if (!r) return;
+    if (!r.state || !r.state.giocatori) return;
+    const altro = [...r.state.giocatori.entries()].find(([id]) => id !== r.sessionId);
+    const chi = altro ? `con <b>${altro[1].nome}</b>${altro[1].connesso ? '' : ' (si sta riconnettendo…)'}` : 'in attesa dell\'amico…';
+    this.scrivi(`Stanza <b class="o116cod">${r.roomId}</b> · ${chi}<br><button class="sbtn o116p" id="o116copia">Copia link</button> <button class="sbtn o116p o116esci" id="o116esci">Esci</button>`);
+    const cp = document.getElementById('o116copia'), es = document.getElementById('o116esci');
+    if (cp && cp.addEventListener) cp.addEventListener('click', () => this.copia());
+    if (es && es.addEventListener) es.addEventListener('click', () => this.esci());
+  }
+  async copia() {
+    const l = this.linkStanza(); let fatto = false;
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(l); fatto = true; } } catch (e) { }
+    const cp = document.getElementById('o116copia'); if (cp) cp.textContent = fatto ? 'Copiato!' : l;
+  }
+  async apri(come) {
+    if (this.room || this.occupato) return; const url = indirizzoServer116();
+    if (!url) { this.scrivi('Server multiplayer non configurato in questa versione.'); return; }
+    this.occupato = true; this.aggiornaUI(); this.scrivi('Mi collego al server…');
+    try {
+      const C = await caricaSdk116(); this.client = this.client || new C.Client(url);
+      const room = await come(this.client); this.collega(room);
+    } catch (e) {
+      const m = String(e && e.message || e);
+      this.scrivi(/not found|no rooms|invalid|locked|full/i.test(m) ? 'Stanza inesistente o piena. Controlla il codice.' : 'Server non raggiungibile. Riprova tra poco.');
+      console.warn('rete116:', m);
+    }
+    this.occupato = false; this.aggiornaUI();
+  }
+  crea() { return this.apri((c) => c.create('battle', { nome: this.G.playerName })); }
+  entra(cod) {
+    const codice = codice116(cod); if (codice.length !== 4) { this.scrivi('Il codice ha 4 caratteri.'); return; }
+    return this.apri(async (c) => {
+      // pagina ricaricata: rientro nello stesso posto se il server lo tiene ancora
+      let tok = null; try { const s = JSON.parse(sessionStorage.getItem('battlecraft_rete116') || 'null'); if (s && s.codice === codice) tok = s.token; } catch (e) { }
+      if (tok) { try { return await c.reconnect(tok); } catch (e) { } }
+      return c.joinById(codice, { nome: this.G.playerName });
+    });
+  }
+  collega(room) {
+    this.room = room; this.benv = null;
+    try { sessionStorage.setItem('battlecraft_rete116', JSON.stringify({ codice: room.roomId, token: room.reconnectionToken })); } catch (e) { }
+    try { const u = new URL(location.href); u.searchParams.set('stanza', room.roomId); history.replaceState(null, '', u.toString()); } catch (e) { }
+    room.onMessage('benvenuto', (m) => { this.benv = m; });
+    room.onMessage('correggi', (m) => this.correggi(m));
+    room.onMessage('pong', (t) => { this.rtt = performance.now() - t; });
+    room.onStateChange((st) => this.istantanea(st));
+    room.onDrop(() => { if (this.G.hud && this.G.online116) this.G.hud.toast('Connessione persa: mi riconnetto…', true); this.aggiornaUI(); });
+    room.onReconnect(() => {
+      try { sessionStorage.setItem('battlecraft_rete116', JSON.stringify({ codice: room.roomId, token: room.reconnectionToken })); } catch (e) { }
+      if (this.G.hud && this.G.online116) this.G.hud.toast('Riconnesso', true);
+      if (this.G.online116) room.send('inGioco', true);
+      this.aggiornaUI();
+    });
+    room.onLeave((code) => { if (this.room === room) this.chiudi(code === 4000 || code === 1000 ? '' : 'Disconnesso dal server.'); });
+  }
+  /* uscita: volontaria (Esci) o per connessione persa senza ritorno */
+  async esci() { const r = this.room; if (!r) return; this.chiudi(''); try { await r.leave(true); } catch (e) { } try { sessionStorage.removeItem('battlecraft_rete116'); } catch (e) { } }
+  chiudi(motivo) {
+    const G = this.G, eraInGioco = G.online116;
+    this.room = null; this.benv = null;
+    for (const r of this.remoti.values()) this.togliRemoto(r); this.remoti.clear();
+    if (eraInGioco && G.state !== 'title') G.quitToMenu();
+    G.online116 = false;
+    this.aggiornaUI(); if (motivo) this.scrivi(motivo);
+    if (this.el.badge) this.el.badge.style.display = 'none';
+  }
+  istantanea(st) {
+    if (!this.room || !st || !st.giocatori) return; const ora = performance.now(), mio = this.room.sessionId, visti = new Set();
+    st.giocatori.forEach((g, id) => {
+      if (id === mio) return; visti.add(id);
+      let r = this.remoti.get(id); if (!r) { r = { id, buf: [], ch: null, tag: null }; this.remoti.set(id, r); }
+      r.info = g;
+      /* Ogni pacchetto porta l'ora d'invio del mittente (ts, il SUO orologio). Via Internet i
+         pacchetti arrivano a grappoli: datati all'arrivo, due finivano sullo stesso istante e la
+         posa saltava (con 150 ms di latenza simulata il salto visto dall'altro perdeva il 60%
+         dell'altezza). Qui li dispongo sul tempo d'invio, portato sul mio orologio con lo scarto
+         piu' piccolo visto (= il pacchetto arrivato piu' in fretta), che sale piano se la rete rallenta. */
+      if (typeof g.ts !== 'number' || !isFinite(g.ts)) return;   // non ha ancora mandato niente
+      const u = r.buf[r.buf.length - 1]; if (u && g.ts <= u.ts) return;   // niente di nuovo (o fuori ordine)
+      const d = ora - g.ts;
+      if (r.off === undefined || Math.abs(d - r.off) > 5000) { r.off = d; r.buf.length = 0; }   // primo pacchetto, o pagina ricaricata (orologio nuovo)
+      else if (d < r.off) r.off = d; else r.off += (d - r.off) * 0.02;
+      const n0 = (v) => (typeof v === 'number' && isFinite(v) ? v : 0);   // un campo mai scritto arriva undefined: NaN rompeva l'IK delle braccia
+      r.buf.push({ t: g.ts + r.off, ts: g.ts, x: n0(g.x), y: n0(g.y), z: n0(g.z), vx: n0(g.vx), vy: n0(g.vy), vz: n0(g.vz), yaw: n0(g.yaw), pitch: n0(g.pitch) });
+      if (r.buf.length > RETE116.buffer) r.buf.splice(0, r.buf.length - RETE116.buffer);
+    });
+    for (const [id, r] of this.remoti) if (!visti.has(id)) { this.togliRemoto(r); this.remoti.delete(id); if (this.G.hud && this.G.online116) this.G.hud.toast(`${r.info ? r.info.nome : 'L\'altro giocatore'} ha lasciato la stanza`, true); }
+    if (!this._ui || ora - this._ui > 400) { this._ui = ora; if (this.G.state === 'title') this.aggiornaUI(); }
+  }
+  correggi(m) {
+    const p = this.G.player; if (!p || !this.G.online116) return; this.corrette++; console.warn('rete116: il server mi ha corretto (' + m.motivo + ')');
+    p.setPosition(m.x, typeof m.y === 'number' ? m.y : p.pos.y, m.z);
+  }
+  /* --- partita online: come startMatch, ma senza bot, bus, tempesta e bottino (fasi successive) --- */
+  startMatch() {
+    const G = this.G, W = G.world;
+    G.resetDynamic(); for (const r of this.remoti.values()) { liberaTarghetta116(r.tag); r.tag = null; r.ch = null; }
+    G.online116 = true;
+    const b = this.benv || { x: W.playerSpawn.x, z: W.playerSpawn.z, yaw: 0 };
+    const p = G.player = new Character(G, { isPlayer: true, name: G.playerName, colors: PALETTES[G.outfit] });
+    const y = G.physics.supportHeight(b.x, b.z, terrainHeight(b.x, b.z) + 3);
+    p.setPosition(b.x, y + 0.05, b.z); p.res = { wood: 120, stone: 50, metal: 30 }; p.giveWeapon('ar', 30); p.selectWeapon('ar'); p.yaw = b.yaw;
+    G.chars.push(p);
+    G.zone.reset(); G.cam.yaw = b.yaw; G.cam.pitch = -0.1; G.cam.dist = CAMCFG.dist;
+    G.time = 0; G.state = 'playing'; G.placement = 0; G.lobbyExposure(false); G.audio.musicaMenu(false);
+    G.ui.title.classList.add('hidden'); G.ui.end.classList.add('hidden'); G.ui.pause.classList.add('hidden'); G.hud.show(true); G.hud.lastMode = ''; G.hud.refreshHotbar();
+    G.hud.toast('Partita online: stanza ' + this.room.roomId, true);
+    this.inviaT = 0; this.room.send('inGioco', true);
+    if (this.el.badge) this.el.badge.style.display = 'block';
+    if (!G._skipLock102) G.requestLock();
+  }
+  /* tornando in lobby si resta nella stanza: si puo' rigiocare con lo stesso codice */
+  esciPartita() {
+    const G = this.G; if (!G.online116) return; G.online116 = false;
+    for (const r of this.remoti.values()) this.togliRemoto(r);
+    if (this.room) { try { this.room.send('inGioco', false); } catch (e) { } }
+    if (this.el.badge) this.el.badge.style.display = 'none';
+    this.aggiornaUI();
+  }
+  creaRemoto(r) {
+    const G = this.G, g = r.info, s = r.buf[r.buf.length - 1] || g;
+    const ch = new Character(G, { name: g.nome, colors: PALETTES[(g.spawn + 1) % PALETTES.length], eroe116: true });
+    ch.remoto116 = r.id; ch.takeDamage = () => 0;   // danni in rete: fase successiva (per ora i colpi sull'altro non contano)
+    ch.giveWeapon('ar', 0); ch.selectWeapon('ar'); ch.onGround = true; ch.wasGround = true;
+    ch.setPosition(s.x, s.y, s.z); ch.yaw = s.yaw || 0;
+    G.chars.push(ch); r.ch = ch; r.arma = null; r.modo = null;
+    r.tag = targhetta116(g.nome, !g.connesso); G.scene.add(r.tag);
+  }
+  togliRemoto(r) {
+    const G = this.G; liberaTarghetta116(r.tag); r.tag = null;
+    if (!r.ch) return; const i = G.chars.indexOf(r.ch); if (i >= 0) G.chars.splice(i, 1);
+    G.scene.remove(r.ch.model.group); r.ch = null;
+  }
+  /* posa dell'altro al tempo (adesso - ritardo), fra i due pacchetti che lo racchiudono */
+  campiona(r, t, out) {
+    const b = r.buf; if (!b.length) return false;
+    if (t <= b[0].t) { Object.assign(out, b[0]); return true; }
+    for (let i = b.length - 1; i > 0; i--) {
+      const a = b[i - 1], c = b[i]; if (t < a.t) continue;
+      if (t >= c.t) break;
+      const k = (t - a.t) / Math.max(1, c.t - a.t);
+      out.x = a.x + (c.x - a.x) * k; out.y = a.y + (c.y - a.y) * k; out.z = a.z + (c.z - a.z) * k;
+      out.vx = a.vx + (c.vx - a.vx) * k; out.vy = a.vy + (c.vy - a.vy) * k; out.vz = a.vz + (c.vz - a.vz) * k;
+      out.yaw = angolo116(a.yaw, c.yaw, k); out.pitch = a.pitch + (c.pitch - a.pitch) * k; return true;
+    }
+    // oltre l'ultimo pacchetto: proseguo con la sua velocita' per al massimo 100 ms, poi resto fermo li'
+    const u = b[b.length - 1], e = Math.min(0.1, (t - u.t) / 1000); Object.assign(out, u);
+    out.x += u.vx * e; out.z += u.vz * e; return true;
+  }
+  update(dt) {
+    const r0 = this.room; if (!r0) return; const G = this.G;
+    const inGioco = !!G.online116 && G.state !== 'title' && G.state !== 'visual93';
+    // --- invio del mio stato ---
+    if (inGioco && G.player && G.state !== 'loading102') {
+      this.inviaT -= dt;
+      if (this.inviaT <= 0) {
+        this.inviaT += RETE116.invioMs / 1000; if (this.inviaT < 0) this.inviaT = RETE116.invioMs / 1000;
+        const p = G.player;
+        r0.send('stato', { ts: performance.now(), x: p.pos.x, y: p.pos.y, z: p.pos.z, vx: p.vel.x, vy: p.vel.y, vz: p.vel.z, yaw: p.yaw, pitch: p.aimPitch || 0,
+          aTerra: !!p.onGround, accov: !!p.crouch90, mira: !!p.ads, arma: p.mode === 'weapon' ? (p.weapon || '') : '', modo: p.mode });
+      }
+      this.pingT -= dt; if (this.pingT <= 0) { this.pingT = RETE116.pingMs / 1000; r0.send('ping', performance.now()); }
+    }
+    // --- l'altro giocatore ---
+    const t = performance.now() - RETE116.ritardoMs, s = this._s || (this._s = {});
+    for (const r of this.remoti.values()) {
+      const g = r.info, vis = inGioco && g && g.inGioco;
+      if (!vis) { if (r.ch) this.togliRemoto(r); continue; }
+      if (!r.ch) { if (!r.buf.length) continue; this.creaRemoto(r); }
+      const ch = r.ch; if (!this.campiona(r, t, s)) continue;
+      ch.pos.set(s.x, s.y, s.z); ch.vel.set(s.vx, s.vy, s.vz); ch.yaw = s.yaw; ch.aimPitch = s.pitch;
+      ch.onGround = !!g.aTerra; ch.crouch90 = !!g.accov;
+      ch.crouchK90 = damp(ch.crouchK90 || 0, ch.crouch90 ? 1 : 0, 14, dt); ch.height = CHAR_CFG.height - .42 * ch.crouchK90;   // come updateCrouch90, senza il controllo del soffitto (lo fa il suo client)
+      const hv = Math.hypot(s.vx, s.vz); ch.moving = hv > 0.05 && ch.onGround;
+      if (hv > 0.05) { ch.wx = s.vx / hv; ch.wz = s.vz / hv; ch.inputDir = true; } else ch.inputDir = false;
+      if (g.arma !== r.arma || g.modo !== r.modo) {
+        r.arma = g.arma; r.modo = g.modo;
+        if (g.arma && WEAPONS[g.arma]) { ch.inv[0] = { w: g.arma, mag: WEAPONS[g.arma].mag }; ch.slot = 0; ch.weapon = g.arma; } else { ch.weapon = null; }
+        ch.mode = g.modo === 'harvest' || g.modo === 'build' ? g.modo : 'weapon'; ch.updateHeld();
+      }
+      ch.ads = !!g.mira && ch.mode === 'weapon' && !!ch.weapon;
+      const etich = g.nome + (g.connesso ? '' : ' (…)'), chiave = etich + (g.connesso ? '' : '#');
+      if (!r.tag || r.tag.userData.testo116 !== chiave) { liberaTarghetta116(r.tag); r.tag = targhetta116(etich, !g.connesso); G.scene.add(r.tag); }
+      r.tag.position.set(s.x, s.y + CHAR_CFG.height - .42 * ch.crouchK90 + 0.45, s.z);
+    }
+    // --- etichetta in alto: stanza, giocatori, ping ---
+    this.badgeT -= dt;
+    if (this.el.badge && inGioco && this.badgeT <= 0) {
+      this.badgeT = 0.5; const n = r0.state && r0.state.giocatori ? r0.state.giocatori.size : 1;
+      this.el.badge.textContent = `ONLINE · STANZA ${r0.roomId} · ${n}/2 · ${Math.round(this.rtt)} ms`;
+    }
+  }
+}
+
 class Game {
   constructor() {
     this.canvas = document.getElementById('game');this.resolution94='auto';try{this.resolution94=localStorage.getItem('battlecraft_resolution94')||this.resolution94;}catch(e){}if(!['auto','1080','1440','4k'].includes(this.resolution94))this.resolution94='auto'; this.time = 0; this.state = 'title'; this.quality = 'med'; this.locked = false; this.noLock = false; this.jumpBuf = 0; this.firedPress = false; this.endTimer = -1; this.zoneTickT = 0; this.placement = 0;
@@ -9272,7 +9548,7 @@ class Game {
     if (!this.playerName) this.playerName = '22lordd';
     this.icons = renderWeaponIcons(); this.buildLobby();
     this.ui = { title: document.getElementById('title'), pause: document.getElementById('pause'), end: document.getElementById('end'), pauseNote: document.getElementById('pauseNote'), endTitle: document.getElementById('endTitle'), endText: document.getElementById('endText'), q1: document.getElementById('qualitySel'), q2: document.getElementById('qualitySel2') };
-    this.bindUI(); this.input.bind(this); this.touch84=new TouchControls84(this);this.pad88=new Gamepad88(this);this.drop88=new Drop88(this);this.dropAudio99=new DropAudio99(this);this.aim99=new AimAssist99(this);this.setQuality(this.touch84.active?'low':'med');if(this.touch84.active){this.world.chunks.setDistance(50);document.getElementById('renderDistanceSel').value='50';} this.onResize(); window.addEventListener('resize', () => this.onResize());window.visualViewport?.addEventListener('resize',()=>this.onResize());
+    this.rete116 = new Rete116(this); /* v116 */ this.bindUI(); this.input.bind(this); this.touch84=new TouchControls84(this);this.pad88=new Gamepad88(this);this.drop88=new Drop88(this);this.dropAudio99=new DropAudio99(this);this.aim99=new AimAssist99(this);this.setQuality(this.touch84.active?'low':'med');if(this.touch84.active){this.world.chunks.setDistance(50);document.getElementById('renderDistanceSel').value='50';} this.onResize(); window.addEventListener('resize', () => this.onResize());window.visualViewport?.addEventListener('resize',()=>this.onResize());
     this.lastT = performance.now(); requestAnimationFrame((t) => this.loop(t));
   }
   // mappa d'ambiente dal cielo (riflessi su metallo, acqua, personaggi)
@@ -9738,6 +10014,7 @@ class Game {
     this._carica102 = false;
   }
   startMatch() {
+    if (this.rete116 && this.rete116.attiva()) return this.rete116.startMatch();   // v116: partita online
     this.resetDynamic();
     const W = this.world;
     const p = this.player = new Character(this, { isPlayer: true, name: this.playerName, colors: PALETTES[this.outfit] });
@@ -9773,7 +10050,7 @@ class Game {
     setTimeout(() => { if (this.state === 'paused' && this.pendingResume) { this.doResume(); } }, 700);
   }
   doResume() { this.pendingResume = false; this.state = 'playing'; this.ui.pause.classList.add('hidden'); this.lastT = performance.now(); this.input.clearMouse(); this.audio.resume(); }
-  quitToMenu() { this.state = 'title'; this.lobbyExposure(true); this.audio.musicaMenu(true); this.refreshLobbyUI(); this.setTab('play'); this.resetDynamic(); this.ui.pause.classList.add('hidden'); this.ui.end.classList.add('hidden'); this.ui.title.classList.remove('hidden'); this.hud.show(false); if (document.pointerLockElement === this.canvas && document.exitPointerLock) document.exitPointerLock(); }
+  quitToMenu() { if (this.rete116) this.rete116.esciPartita(); this.state = 'title'; this.lobbyExposure(true); this.audio.musicaMenu(true); this.refreshLobbyUI(); this.setTab('play'); this.resetDynamic(); this.ui.pause.classList.add('hidden'); this.ui.end.classList.add('hidden'); this.ui.title.classList.remove('hidden'); this.hud.show(false); if (document.pointerLockElement === this.canvas && document.exitPointerLock) document.exitPointerLock(); }
   onDeath(victim, attacker) {
     if (!victim.alive) return; victim.alive = false; victim.deathT = 0; victim.vel.set(0, 0, 0); victim.ads = false;
     let alive = 0; for (const c of this.chars) if (c.alive) alive++;
@@ -9875,6 +10152,7 @@ class Game {
     const rawMs93=now-this.lastT;let dt = rawMs93 / 1000; this.lastT = now; if (dt > 0.05) dt = 0.05; if (dt < 0) dt = 0;
     if(this.pad88)this.pad88.update(dt);if(this.touch84)this.touch84.sync();
     if(this.visual93)this.visual93.launch.style.display=this.state==='title'?'block':'none';
+    if(this.rete116)this.rete116.update(dt);/* v116: prima di update, cosi' l'altro e' in posa prima di animate */
     if(this.state==='visual93')this.visual93.update(dt,rawMs93);
     else if (this.state === 'playing') this.update(dt);
     else if (this.state === 'title') { this.time += dt; this.updateLobby(dt); }
@@ -9927,8 +10205,8 @@ class Game {
     // --- sistemi ---
     this.build.update(dt); this.edit.update(); this.harvest.update(dt); this.items.update(dt); if (this.forzieri114) this.forzieri114.update(dt); if (this.medikit114) this.medikit114.update(dt); this.world.update(dt, this.time);
     // --- area sicura ---
-    if(this.drop88.elapsed>this.drop88.duration)this.zone.update(dt); this.zoneTickT -= dt;
-    for (const c of this.chars) { if (!c.alive||c.air88) continue; if (this.zone.distOutside(c.pos) > 0) { c.takeDamage(this.zone.dps * dt, c, null); if (c.isPlayer && this.zoneTickT <= 0) { this.zoneTickT = 1; this.audio.zoneTick(); } } }
+    if(this.drop88.elapsed>this.drop88.duration&&!this.online116)this.zone.update(dt); this.zoneTickT -= dt;
+    for (const c of this.chars) { if (!c.alive||c.air88||this.online116) continue; if (this.zone.distOutside(c.pos) > 0) { c.takeDamage(this.zone.dps * dt, c, null); if (c.isPlayer && this.zoneTickT <= 0) { this.zoneTickT = 1; this.audio.zoneTick(); } } }
     // --- telecamera, luci, effetti ---
     if(p.air88)this.drop88.camera(dt);else this.cam.update(dt, p, false);
     if (this.giorno110) this.giorno110.update(dt, p.pos); else { this.sun.position.set(p.pos.x + 92, p.pos.y + 56, p.pos.z + 52); this.sun.target.position.copy(p.pos); }

@@ -1,0 +1,22 @@
+{
+  "name": "battlecraft-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Server multiplayer di Battlecraft (Colyseus)",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node test/stanza.mjs"
+  },
+  "dependencies": {
+    "@colyseus/schema": "5.0.52",
+    "colyseus": "0.18.12"
+  },
+  "devDependencies": {
+    "@colyseus/sdk": "0.18.10"
+  }
+}
