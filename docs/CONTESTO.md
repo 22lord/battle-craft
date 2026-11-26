@@ -1505,6 +1505,8 @@ muoiono, tempesta e cure limitate, costruzioni e riconnessione che le ritrova, c
 `tools/browser/online118.cjs` (2 Edge + 5 bot) 17/17: percorso del bus identico, orario a < 0,35 s dal server, B vede A cadere e
 planare col deltaplano, i bot di A si muovono da B, A atterrato visto da B a < 1 m, un bot nello stesso punto a < 3 m, un pezzo
 costruito da A compare da B, fine e lobby. `online117.cjs` (3 Edge, prato) 16/16, `online116.cjs` 27/27.
+**Online (26/11/2026)**: server di Francoforte 72/72 col codice nuovo; online118 sul link di Vercel 17/17 (scatti in
+`screen/online118-pubblicato/`).
 **Non visto**: partita lunga con 10 persone vere; telefono. **Ancora locali**: raccolta di oggetti/forzieri, alberi picconati.
 
 ### Cosa non è verificato (detto dal LEGGIMI stesso, e vero)
