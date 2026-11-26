@@ -1443,6 +1443,9 @@ fa la 0 e la 1** (+ 10 giocatori).
 - Ricarica e colpi di piccone dell'altro: campi `ricarica` e `sw` (contatore) nello stato.
 - **Server in Europa**: `render.yaml` con `region: frankfurt`. Render non cambia la regione di un servizio esistente:
   Lorenzo deve cancellarlo e riapplicare il Blueprint (`docs/ONLINE.md`).
+  **Fatto il 26/11/2026**: stesso indirizzo (`wss://battlecraft-server.onrender.com`), ping da qui **38 ms** (prima 190),
+  `ORIGINI_CONSENTITE=https://battlecraft-blush.vercel.app` impostata. Contro il server vero: stanza.mjs 45/45,
+  online117.cjs sul link di Vercel 15/15 (scatti in `screen/online117-pubblicato/`).
 
 **Misurato**: `server/test/stanza.mjs` 45/45 (10 giocatori + l'undicesimo rifiutato, colpo valido -23, danno gonfiato
 tagliato a 44, 30 spari di precisione in un istante → ne passano 3, colpo di spalle scartato, eliminazione con annuncio e
