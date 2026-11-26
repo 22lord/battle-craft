@@ -39,7 +39,7 @@ const test = [
   ['v112.cjs', []],
   ['v114.cjs', []],
   ['v115.cjs', []],
-  ['v116.cjs', []],
+  ['v118.cjs', []],
 ];
 
 let falliti = 0;

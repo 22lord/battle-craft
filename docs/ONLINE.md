@@ -12,13 +12,17 @@ Browser B ──WebSocket──┘
        └── la pagina (index.html) sta su Vercel
 ```
 
-## Come si gioca
+## Come si gioca (v118)
 
-1. **Crea stanza** (pannello sopra "Gioca"). Esce un codice, es. `K7Q2`.
-2. **Copia link** e mandalo all'amico (`https://…/?stanza=K7Q2`): aprendolo trova il codice già scritto e preme **Entra**.
-   In alternativa scrive il codice a mano.
-3. Tutti e due premono **Gioca**. Si parte in due punti diversi di un prato a ovest della città, 10 m l'uno dall'altro.
-4. Tornando alla lobby si resta nella stanza (si può rigiocare); **Esci** la lascia.
+1. **Crea stanza** (pannello sopra "Gioca"). Esce un codice, es. `K7Q2`. Chi la crea è l'**host** (★).
+2. **Copia link** e mandalo agli amici (`https://…/?stanza=K7Q2`): aprendolo trovano il codice già scritto e premono **Entra**.
+3. L'host sceglie quanti **bot** (nessuno, 5, 10, 15, 20, 29) e preme **Avvia** (per gli altri il pulsante dice "Attendi").
+4. Tutti caricano la stessa partita; quando **tutti** hanno finito, il **bus** parte insieme per tutti. Stesso percorso,
+   stessa tempesta, stesso bottino a terra. Da quel momento la stanza è **chiusa**: nessuno entra finché ne resta uno solo.
+5. Chi viene eliminato **guarda la partita**. A fine partita tutti vedono il risultato e dopo 8 secondi la stanza torna in
+   lobby, pronta per la prossima. **Esci** lascia la stanza; tornare alla lobby a partita in corso vuol dire uscire dalla partita.
+
+Chi non è host parte senza aver cliccato: se il mouse non è agganciato, basta un clic sul gioco.
 
 Se cade la connessione il gioco si riconnette da solo; il server tiene il posto per **30 secondi**.
 Anche ricaricando la pagina, Entra con lo stesso codice rientra nello stesso posto.
@@ -37,10 +41,16 @@ Anche ricaricando la pagina, Entra con lo stesso codice rientra nello stesso pos
 - nome sopra la testa (grigio con "(…)" mentre l'altro si riconnette)
 - il server controlla ogni movimento: velocità oltre la corsa, salite impossibili, teletrasporti, fuori mappa,
   troppi messaggi, orologio truccato. Se un movimento non va, rimanda il giocatore all'ultima posizione buona.
-- modalità di prova: **niente bot, bus, tempesta e bottino** (andrebbero fuori sincronia fra i due).
+- **partita vera** (v118): bus all'ora del server, deltaplano degli altri visibile, tempesta uguale per tutti (il danno
+  lo manda ognuno per sé, l'host per i bot; il server lo limita alla dps massima), cure e scudi raccolti mandati al server
+- **bot** (v118): li fa ragionare il computer dell'host (il server non ha la mappa), gli altri li vedono coi suoi pacchetti
+  (10 al secondo); la loro vita sta sul server come quella dei giocatori. Se l'host esce, i bot passano al nuovo host.
+- **costruzioni** (v118): pezzi piazzati, colpiti, modificati e distrutti arrivano a tutti; il server se li segna e chi si
+  riconnette li ritrova
+- modalità **prato** solo per le prove: `?prato=1` nell'indirizzo di chi crea la stanza (niente bus e tempesta)
 
-**Non ancora** (fasi successive, in quest'ordine): **partenza dal bus** insieme e deltaplano visibile, **costruzioni**
-condivise, **bot** per riempire la partita; poi oggetti a terra, forzieri e alberi/rocce picconati.
+**Non ancora**: gli **oggetti a terra** e i **forzieri** sono uguali per tutti all'inizio ma chi raccoglie non lo dice agli
+altri (un'arma presa da te resta a terra per l'altro); gli **alberi/rocce picconati** restano in piedi per gli altri.
 
 ## Pubblicazione
 
@@ -109,6 +119,7 @@ Aperta da localhost la pagina usa da sola `ws://localhost:2567`. Per provare un 
 | `cd server && npm test` | regole del server (senza rete) + **client veri** via WebSocket: codice, 10 giocatori e l'undicesimo rifiutato, sync, teletrasporto corretto, colpi/danni/ritmo di fuoco/eliminazione, riconnessione, uscita |
 | `cd server && node test/stanza.mjs wss://indirizzo` | lo stesso contro un server già acceso, anche quello online |
 | `node test/v116.cjs` | la parte nel gioco con una stanza finta (fa parte di `node test/run-all.cjs`) |
+| `node tools/browser/online118.cjs <uscita> [url-gioco] [url-server]` | **due Edge + 5 bot**, partita vera: solo l'host avvia, B parte senza cliccare, stesso percorso del bus all'ora del server, deltaplano di A visto da B, bot sincronizzati, un pezzo costruito, fine e ritorno in lobby |
 | `node tools/browser/online117.cjs <uscita> [url-gioco] [url-server]` | **tre Edge separati**: A spara a B fino a eliminarlo, C guarda (vita uguale su tutti, scie e fiammate viste, feed, "Eliminato", rientro) |
 | `node tools/browser/online116.cjs <uscita> [url-gioco] [url-server]` | **due Edge separati** sulla stessa stanza: si vedono, corrono, saltano, si accovacciano, cambiano arma, uno perde la connessione e rientra; scatti da tutti e due |
 

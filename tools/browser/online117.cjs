@@ -46,7 +46,7 @@ async function miraESpara(A, nome, ms) {
 }
 
 (async () => {
-  const A = await apri('Lorenzo');
+  const A = await apri('Lorenzo', 'prato=1');   // v118: prato di prova (niente bus), la partita la avvia l'host
   await A.page.click('#o116crea');
   await A.page.waitForFunction(() => window.__game.rete116.room, null, { timeout: 30000 });
   const codice = await A.page.evaluate(() => window.__game.rete116.room.roomId);
@@ -54,7 +54,7 @@ async function miraESpara(A, nome, ms) {
   for (const X of [B, C]) { await X.page.click('#o116entra'); await X.page.waitForFunction(() => window.__game.rete116.room, null, { timeout: 30000 }); }
   await aspetta(800);
   prova('tre giocatori nella stanza (3/10)', (await stato(A.page)).n === 3 && /3\/10/.test(await A.page.textContent('#modoNome116')), await A.page.textContent('#modoNome116'));
-  for (const X of [A, B, C]) await X.page.click('#btnPlay');
+  await A.page.click('#btnPlay');   // v118: avvia l'host, gli altri partono da soli
   for (const X of [A, B, C]) await X.page.waitForFunction(() => window.__game.state === 'playing', null, { timeout: 60000 });
   await aspetta(2500);
   let sa = await stato(A.page), sb = await stato(B.page), sc = await stato(C.page);
@@ -82,17 +82,19 @@ async function miraESpara(A, nome, ms) {
   sa = await stato(A.page); sb = await stato(B.page); sc = await stato(C.page);
   const B_srv = sa.server.find((g) => g.nome === 'Amico'), A_srv = sa.server.find((g) => g.nome === 'Lorenzo');
   prova('B eliminato sul server, uccisione ad A', B_srv && B_srv.vivo === false && B_srv.hp === 0 && A_srv.uccisioni === 1, [B_srv, A_srv]);
-  prova('B vede la schermata "Eliminato"', sb.state === 'ended' && /Eliminato/i.test(sb.fine), [sb.state, sb.fine]);
+  prova('B eliminato guarda la partita (spettatore, la schermata di fine arriva a fine partita)', sb.state === 'playing' && sb.io && !sb.io.alive, [sb.state, sb.io]);
   prova('A e C vedono B a terra', !(sa.altri.find((x) => x.nome === 'Amico') || {}).alive && !(sc.altri.find((x) => x.nome === 'Amico') || {}).alive);
   prova('l\'eliminazione compare nel feed di tutti', [sa, sb, sc].every((s) => /Lorenzo.*Amico/.test(s.feed)), [sa.feed, sb.feed, sc.feed]);
   prova('A e C ancora in partita (restano in due)', sa.state === 'playing' && sc.state === 'playing', [sa.state, sc.state]);
   await scatta(A, '03_B_eliminato'); await scatta(B, '03_eliminato'); await scatta(C, '03_B_eliminato');
 
-  // B torna in lobby e rientra: vita piena, di nuovo in piedi per gli altri
-  await B.page.evaluate(() => window.__game.quitToMenu()); await aspetta(500);
-  await B.page.click('#btnPlay'); await B.page.waitForFunction(() => window.__game.state === 'playing', null, { timeout: 60000 }); await aspetta(2500);
-  sa = await stato(A.page); sb = await stato(B.page);
-  prova('B rientra: vita piena e A lo vede in piedi', sb.io.hp === 100 && sb.io.alive && (sa.altri.find((x) => x.nome === 'Amico') || {}).alive === true, [sb.io, sa.altri]);
+  // v118: A elimina anche C -> resta solo A -> fine partita, A vince, tutti tornano in lobby
+  console.log('mira:', await miraESpara(A, 'Terzo', 8000));
+  await A.page.waitForFunction(() => window.__game.state === 'ended', null, { timeout: 15000 }).catch(() => {});
+  sa = await stato(A.page); sc = await stato(C.page);
+  prova('resta solo A: A vede "Vittoria", C "Eliminato"', sa.state === 'ended' && /Vittoria/i.test(sa.fine) && /Eliminato/i.test(sc.fine), [sa.state, sa.fine, sc.fine]);
+  await A.page.waitForFunction(() => window.__game.rete116.room.state.fase === 'lobby', null, { timeout: 20000 }).catch(() => {});
+  prova('dopo la fine la stanza torna in lobby', await A.page.evaluate(() => window.__game.rete116.room.state.fase) === 'lobby');
 
   const err = [A, B, C].flatMap((X) => X.errori.map((e) => X.nome + ' ' + e));
   console.log(err.slice(0, 15).join('\n') || 'nessun errore nella pagina');

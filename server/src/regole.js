@@ -5,10 +5,18 @@
 
 export const REGOLE = {
   maxGiocatori: 10,
+  maxBot: 29,                // v118: bot in partita (li fa ragionare il client dell'host)
+  caricoMaxS: 45,            // v118: chi non ha finito di caricare entro questo tempo guarda la partita
+  viaTraMs: 1500,            // v118: il bus parte questo tempo dopo che tutti sono pronti (margine per la rete)
+  fineS: Number(process.env.BC_FINE_S) || 8,                  // v118: secondi fra la fine della partita e il ritorno in lobby
+  zonaDps: 12,               // v118: danno al secondo massimo della tempesta (ZONE_PHASES)
+  portataCostruzione: 14,    // v118: m fra chi costruisce e il pezzo (nel gioco 9,5)
+  volo: 20,                  // v118: m/s orizzontali in caduta/planata (nel gioco 16 e 10)
+  quotaBus: 80,              // v118: sul bus si sta a ~108 m
   secchiello: { capienza: 12, ritmo: 30 },   // un client manda 20 stati al secondo: oltre i 30 di media li scarto
-  anticipoMs: 500,           // il client non puo' dichiarare piu' tempo di quello vero oltre questo
-  creditoMs: 1000, creditoRicarica: 100,   // v117: intoppi una tantum dell'orologio (vedi validaStato)
-  riservaMs: 500,            // tempo massimo "messo da parte" stando zitti
+  anticipoMs: 750,           // il client non puo' dichiarare piu' tempo di quello vero oltre questo
+  creditoMs: 2000, creditoRicarica: 200,   // v117: intoppi una tantum dell'orologio (vedi validaStato)
+  riservaMs: 2000,            // tempo massimo "messo da parte" stando zitti
   corsa: 4.6,                // m/s, MOVECFG.run
   margineVel: 1.35,          // tolleranza su latenza e arrotondamenti
   margineFisso: 0.6,         // m concessi a ogni controllo (pacchetti in ritardo, spinte fra personaggi)
@@ -72,12 +80,15 @@ export function validaStato(msg, prec, ora, orologio) {
       orologio.credito -= extra; orologio.ora0 -= extra;
     }
   }
+  // v118: sul bus si sta dove sta il bus (il percorso lo calcolano i client col seme): basta che sia in alto
+  if (msg.aria === 'bus') { if (y < REGOLE.quotaBus) return { ok: false, motivo: 'bus troppo basso' }; return pulito(msg); }
   if (prec && prec.ts !== undefined) {
     const dt = (ts - prec.ts) / 1000;
     if (dt <= 0) return { ok: false, motivo: 'vecchio' };               // fuori ordine o ripetuto
     const dtv = Math.min(dt, 1.0);   // dopo una pausa lunga non regalo metri in piu'
     const dh = Math.hypot(x - prec.x, z - prec.z);
-    const maxH = REGOLE.corsa * REGOLE.margineVel * dtv + REGOLE.margineFisso;
+    const inAria = msg.aria === 'fall' || msg.aria === 'glide' || prec.aria === 'bus' || prec.aria === 'fall' || prec.aria === 'glide';
+    const maxH = (inAria ? REGOLE.volo : REGOLE.corsa) * REGOLE.margineVel * dtv + REGOLE.margineFisso;
     if (dh > maxH) return { ok: false, motivo: 'troppo veloce', dh, maxH };
     if (prec.y !== null) {
       const dy = y - prec.y;
@@ -110,7 +121,7 @@ function pulito(msg) {
       x, y, z,
       vx: lim(vx, 12), vy: lim(vy, REGOLE.cadutaMax), vz: lim(vz, 12),
       yaw: Math.atan2(Math.sin(yaw), Math.cos(yaw)), pitch: lim(pitch, 1.4),
-      ts: msg.ts, ricarica: !!msg.ricarica, sw: (msg.sw | 0) & 255, aTerra: !!msg.aTerra, accov: !!msg.accov, mira: !!msg.mira && !!arma, arma, modo,
+      ts: msg.ts, aria: ['', 'bus', 'fall', 'glide'].includes(msg.aria) ? msg.aria : '', ricarica: !!msg.ricarica, sw: (msg.sw | 0) & 255, aTerra: !!msg.aTerra, accov: !!msg.accov, mira: !!msg.mira && !!arma, arma, modo,
     },
   };
 }

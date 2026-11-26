@@ -29,7 +29,7 @@ const stato = (pg) => pg.evaluate(() => {
 const scatta = async (c, nome) => { await c.page.screenshot({ path: path.join(out, nome + '_' + c.nome + '.png') }); };
 
 (async () => {
-  const A = await apri('Lorenzo');
+  const A = await apri('Lorenzo', 'prato=1');   // v118: prato di prova (niente bus), la partita la avvia l'host
   await A.page.click('#o116crea');
   await A.page.waitForFunction(() => window.__game.rete116.room, null, { timeout: 20000 });
   const codice = await A.page.evaluate(() => window.__game.rete116.room.roomId);
@@ -46,7 +46,7 @@ const scatta = async (c, nome) => { await c.page.screenshot({ path: path.join(ou
   await scatta(B, '02_lobby_entrato');
   prova('stanza con 2 giocatori su A', (await stato(A.page)).n === 2);
 
-  await A.page.click('#btnPlay'); await B.page.click('#btnPlay');
+  await A.page.click('#btnPlay');   // v118: avvia l'host, B parte da solo
   await A.page.waitForFunction(() => window.__game.state === 'playing', null, { timeout: 60000 });
   await B.page.waitForFunction(() => window.__game.state === 'playing', null, { timeout: 60000 });
   await aspetta(2500);
@@ -104,7 +104,7 @@ const scatta = async (c, nome) => { await c.page.screenshot({ path: path.join(ou
   sa = await stato(A.page); sb = await stato(B.page);
   prova('A vede dove e\' andato B (< 5 cm)', scarto(sb, sa) < 0.05, scarto(sb, sa));
   await scatta(A, '09_vede_B'); await scatta(B, '09_vede_A');
-  prova('etichetta della stanza in alto', /ONLINE · STANZA [A-Z2-9]{4} · 2\/10/.test(sa.badge), sa.badge);
+  prova('etichetta della stanza in alto', /ONLINE · STANZA [A-Z2-9]{4} · 2 IN VITA/.test(sa.badge), sa.badge);
 
   // B perde la connessione (WebSocket chiuso di colpo): A lo vede "in riconnessione", poi B rientra da solo
   await B.page.evaluate(() => { const c = window.__game.rete116.room.connection; (c.transport && c.transport.ws ? c.transport.ws : c).close(); });

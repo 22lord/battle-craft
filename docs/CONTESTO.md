@@ -4,11 +4,11 @@ Documento di passaggio di consegne. Serve a riprendere in una chat nuova senza r
 da zero e senza rifare errori già pagati.
 
 Autore: Lorenzo Deda (@22lordd), Napoli.
-Stato al 26 novembre 2026: **battlecraft v117**, un solo file HTML (`index.html` nella repo) + il **server multiplayer** in `server/` (sezioni 9.16 e 9.17, guida in `docs/ONLINE.md`). Gioco e isola sono
+Stato al 26 novembre 2026: **battlecraft v118**, un solo file HTML (`index.html` nella repo) + il **server multiplayer** in `server/` (sezioni 9.16-9.18, guida in `docs/ONLINE.md`). Gioco e isola sono
 **fusi**: l'isola della vecchia "mappa" è il terreno della partita.
 
-Versione del contesto: v13. Le v94-v97 non sono mai arrivate in chat:
-le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8, v109 in 9.9, v110 in 9.10, v111 in 9.11, v112 in 9.12, v113 in 9.13, v114 in 9.14, v115 in 9.15, v116 in 9.16, v117 in 9.17.
+Versione del contesto: v14. Le v94-v97 non sono mai arrivate in chat:
+le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8, v109 in 9.9, v110 in 9.10, v111 in 9.11, v112 in 9.12, v113 in 9.13, v114 in 9.14, v115 in 9.15, v116 in 9.16, v117 in 9.17, v118 in 9.18.
 
 **Dalla v110 la grafica procede a fasi** (prompt in `docs/PROMPT-GRAFICA.md`, una fase per sessione, piano
 prima e ok di Lorenzo). Fatte: **fase 1 (luce, cielo, post-processing)** e **fase 2 (materiali e texture,
@@ -53,7 +53,7 @@ ancora quella, ma adesso vive dentro il gioco.
    richiesta poggia su una diagnosi sbagliata, dirlo. Richiesta sua, testuale: «ogni volta
    che ti do sti comandi cerca di sviluppare un senso critico».
 4. **Ogni file consegnato va rinominato con un numero di versione progressivo**, mai lo
-   stesso nome due volte. La prossima è la **v118**. Nella repo il file si chiama `index.html` e la
+   stesso nome due volte. La prossima è la **v119**. Nella repo il file si chiama `index.html` e la
    versione sta in `VERSIONE`: le consegne fuori dalla repo restano `battlecraft-vNN.html`.
 5. **Il modello del personaggio l'ha fatto Lorenzo con Meshy** (detto da lui il 26/11/2026, v116): non viene da un sito
    di terzi, la questione licenza è chiusa. (Meshy: col piano gratuito i modelli escono in CC BY 4.0, cioè va citato
@@ -278,7 +278,7 @@ test/v110.cjs               v110: curva, nebbia, livelli di qualità, ciclo del 
 test/v111.cjs               v111: sparo automatico, finestra del nome, scritta della versione
 test/v112.cjs               v112: tappi del castello (spenti, si accendono rompendo, si rispengono), UV nel mondo, ripiego senza GPU
 test/v115.cjs               v115: auto (modello, colori, tetti, sentieri e case, piano, collisioni, porte, piccone)
-test/v116.cjs               v116: indirizzo del server, solitario invariato, partita online, l'altro giocatore (stanza finta)
+test/v118.cjs               v116-v118: indirizzo, solitario invariato, STESSA partita per host e ospite, volo, bot, costruzioni, fine (stanza finta)
 server/test/stanza.mjs      v116: regole del server + DUE CLIENT VERI via WebSocket (cd server && npm test; non e' in run-all: serve npm install)
 test/v114.cjs               v114: estrazione per rarità, forziere (modello, piazzamento, raggio, una volta sola, bottino, danno), medikit
 ```
@@ -307,6 +307,8 @@ tools/macchina115/prepara.cjs [in.obj] [out.glb]       v115: auto di Lorenzo da 
 tools/patch115/                                        la patch della v115 (auto.js, strade.js, applica.cjs)
 tools/patch116/                                        la patch della v116 (rete.js, applica.cjs)
 tools/patch117/                                        la patch della v117: SOSTITUISCE il modulo di rete intero con il suo rete.js
+tools/patch118/                                        la patch della v118: idem (rete.js) + bus/tempesta/pausa online + scelta dei bot
+tools/browser/online118.cjs <out> [url] [server]       v118: 2 Edge + 5 bot, partita vera col bus (17 controlli)
 tools/browser/online117.cjs <out> [url] [server]       v117: TRE Edge separati, A spara a B fino a eliminarlo, C guarda (15 controlli)
 tools/browser/statico.cjs [porta] [cartella]           server statico in Node (8123 = repo, 8124 dist = come su Vercel)
 tools/browser/online116.cjs <out> [url] [server]       v116: DUE Edge separati nella stessa stanza, 27 controlli + scatti da tutti e due
@@ -564,7 +566,13 @@ entro 5 mm dall'ancoraggio.
     che si ricarica a 0,1 s/s (`creditoMs`).
 50. **Messaggi inviati in un test con `ts` inventati** (`performance.now() + 5000`): il guinzaglio dell'orologio li
     rifiuta (giustamente) e i test dopo falliscono a cascata. Nei test `ts` veri.
-51. **Server lasciati accesi in background** (2567 Colyseus, 8123/8124 statici): per riavviare col codice nuovo va ucciso il
+51. **Un seme comune non basta se un client consuma più numeri casuali dell'altro**: `BotBrain` (solo sull'host) pesca da
+    `Math.random` e tutto ciò che nasce dopo diverge (il bus: 124 m). Ogni cosa che deve venire uguale riparte da un seme suo.
+52. **Il guinzaglio dell'orologio che segue il pacchetto più in RITARDO** (riserva stretta) fa sembrare "dal futuro" i
+    pacchetti normali dopo uno scatto: con 3 browser sul PC decine di correzioni. Riserva 2 s, credito 2 s (0,2 s/s).
+53. **Con due misure prese una dopo l'altra, un oggetto veloce sembra in due posti** (bus a 14 m/s, 0,4 s = 5,6 m): confrontare
+    il percorso e l'orario, non la posizione.
+54. **Server lasciati accesi in background** (2567 Colyseus, 8123/8124 statici): per riavviare col codice nuovo va ucciso il
     processo sulla porta (`netstat -ano | grep :2567`, poi `taskkill //PID n //F`), se no il nuovo muore con EADDRINUSE.
 
 ---
@@ -1455,6 +1463,50 @@ tre schermi, B e C vedono scie e fiammate di A, eliminazione nel feed di tutti, 
 B rientra con vita piena). `test/v116.cjs` 44/44 (colpi e vita lato client con stanza finta).
 **Non visto**: partita vera fra PC diversi con la v117 (serve il server nuovo online), telefono.
 
+### 9.18 Cosa cambia nella v118 — multiplayer fase 3: partita vera col bus, bot, costruzioni
+
+Richiesta di Lorenzo (testuale): «NOOO VOGLIO il bus. quando faccio partire la partita parte. dopo che ha caricato a tutti .
+e da li non si puo piu entrare. fin quando non ne rimane solo 1 . poi si le costruzioni non sono ancora presenti. e voglio la
+possibilità di aggiungere bot alla lan».
+
+**Ciclo della partita sul server** (`StanzaBattle.js` riscritto): `fase` lobby → carico → partita → fine → lobby. L'host (chi
+crea, ★; passa a un altro se esce) preme Avvia (`avvia`: serve almeno 2 fra umani e bot): il server sceglie `seme`, azzera
+tutti, crea i bot (`state.bot`, schema `Bot` con vita/scudo/vivo), chiude la stanza (`lock` + `onJoin` che rifiuta fuori dalla
+lobby). Ogni client carica e manda `pronto` (l'host anche gli scudi iniziali dei bot); quando lo sono tutti (o dopo 45 s) →
+`partita` con `via` = ora del server + 1,5 s. `controllaFine`: se resta ≤ 1 vivo (umani + bot) o nessun umano → `fine`
+(`vincitore`), dopo 8 s di nuovo lobby e stanza riaperta. `arrendo`: chi torna in lobby a partita in corso è fuori.
+`pong` porta l'ora del server (`s`): il client ne ricava lo scarto (`offSrv`, col ping più basso).
+
+**Client** (`Rete116` riscritto, `tools/patch118/rete.js`): in stanza "Gioca" chiama `premiGioca` (avvolge `G.avvia102`); quando lo
+stato passa a `carico` tutti eseguono `carica()`: schermata di caricamento, `startMatch` dal seme, shader, `pronto`, attesa
+degli altri, attesa dell'ora `via`, poi gioco. **Stessa partita per tutti**: `Math.random` sostituito da `mulberry32(seme)`
+durante la creazione; il cervello dei bot (`BotBrain`, solo sull'host) consuma numeri casuali, quindi bottino e bus ripartono
+ciascuno da un **seme suo** (prima il bus veniva diverso: 124 m fra i due schermi, misurato), e la tempesta sceglie i cerchi con
+un caso suo (avvolgendo `pickNext` PRIMA di `zone.reset`). Bus e tempesta seguono l'ora del server (`allinea`: si corregge
+`drop88.elapsed` oltre 0,3 s; la tempesta avanza di quanto manca, `zonaVoluta`).
+- **Volo**: lo stato porta `aria` ('' / bus / fall / glide); chi è guidato dalla rete ha un `air88` suo col deltaplano
+  (`aria()`), sul bus è nascosto (anche l'etichetta). `Drop88.update` salta i personaggi con `remoto116`. Il server sul bus
+  accetta qualsiasi punto sopra 80 m, in caduta/planata 20 m/s.
+- **Bot**: creati uguali su tutti i client; sull'host hanno `BotBrain`, sugli altri `remoto116 = 'b3'` e si muovono coi
+  pacchetti `bots` dell'host (10/s, compatti). Spari dei bot: `sparoBot` (solo dall'host). Bot che colpisce l'host stesso:
+  il `takeDamage` del giocatore lo manda come colpo del bot. Se l'host cambia, il nuovo prende i bot (`prendiBots`).
+- **Tempesta**: riaccesa online; il danno al mio giocatore (e ai bot, per l'host) si accumula e va al server ogni 0,5 s
+  (`zona`), il server lo limita (12 dps). **Cure/scudi** raccolti: `cura` col valore nuovo (max 100).
+- **Costruzioni**: `BuildSystem.place/damagePiece/applyPattern` avvolti: pezzo, danno, rotto, modifica al server, che li gira
+  e se li segna (chi si riconnette riceve `pezzi`). Il pezzo di un altro si piazza con `place` senza costo (`_daRete`).
+- **Spettatore**: `onDeath` avvolto: online niente `endTimer`, chi è eliminato guarda; la schermata di fine arriva con `fine`
+  (col nome del vincitore, anche se è un bot). La pausa online non ferma la partita (l'host fa ragionare i bot di tutti).
+- Chi non è host parte senza un gesto: il mouse si aggancia al primo clic sul gioco (`pointerlockchange` toglie l'avviso).
+- Modalità `?prato=1` (solo per le prove): si parte nel prato, niente bus né tempesta.
+
+**Misurato**: `server/test/stanza.mjs` 72/72 (ciclo intero, stanza chiusa, solo l'host avvia/sceglie i bot, bot che sparano e
+muoiono, tempesta e cure limitate, costruzioni e riconnessione che le ritrova, cambio di host, fine per arresa).
+`test/v118.cjs` 47/47 (host e ospite: **stesso** bus, salti dei bot, bot, bottino, primo cerchio; un altro seme = altro bus).
+`tools/browser/online118.cjs` (2 Edge + 5 bot) 17/17: percorso del bus identico, orario a < 0,35 s dal server, B vede A cadere e
+planare col deltaplano, i bot di A si muovono da B, A atterrato visto da B a < 1 m, un bot nello stesso punto a < 3 m, un pezzo
+costruito da A compare da B, fine e lobby. `online117.cjs` (3 Edge, prato) 16/16, `online116.cjs` 27/27.
+**Non visto**: partita lunga con 10 persone vere; telefono. **Ancora locali**: raccolta di oggetti/forzieri, alberi picconati.
+
 ### Cosa non è verificato (detto dal LEGGIMI stesso, e vero)
 
 - **nessuno ha visto la v93 renderizzata** tranne, eventualmente, Lorenzo
@@ -1681,4 +1733,7 @@ esistente, nomi, riconnessione, validazione sul server, pubblicazione Vercel + R
 **v117**: multiplayer fase 2 — fino a 10 giocatori, spari e danni fra giocatori con la vita sul server, spari visibili,
 eliminazioni; server a Francoforte (sezione 9.17).
 
-**Prossima consegna: v118** (multiplayer fase 2b: partenza dal bus insieme + deltaplano visibile; poi costruzioni, poi bot).
+**v118**: multiplayer fase 3 — partita vera: l'host avvia, bus insieme all'ora del server, stanza chiusa fino alla fine,
+deltaplano degli altri, bot (sul computer dell'host), costruzioni condivise, spettatore (sezione 9.18).
+
+**Prossima consegna: v119** (multiplayer: raccolta di oggetti e forzieri condivisa; oppure fase grafica 3).
