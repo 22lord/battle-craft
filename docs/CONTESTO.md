@@ -4,11 +4,11 @@ Documento di passaggio di consegne. Serve a riprendere in una chat nuova senza r
 da zero e senza rifare errori già pagati.
 
 Autore: Lorenzo Deda (@22lordd), Napoli.
-Stato al 26 novembre 2026: **battlecraft v112**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
+Stato al 26 novembre 2026: **battlecraft v115**, un solo file HTML (`index.html` nella repo). Gioco e isola sono
 **fusi**: l'isola della vecchia "mappa" è il terreno della partita.
 
 Versione del contesto: v11. Le v94-v97 non sono mai arrivate in chat:
-le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8, v109 in 9.9, v110 in 9.10, v111 in 9.11, v112 in 9.12.
+le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8, v109 in 9.9, v110 in 9.10, v111 in 9.11, v112 in 9.12, v113 in 9.13, v114 in 9.14, v115 in 9.15.
 
 **Dalla v110 la grafica procede a fasi** (prompt in `docs/PROMPT-GRAFICA.md`, una fase per sessione, piano
 prima e ok di Lorenzo). Fatte: **fase 1 (luce, cielo, post-processing)** e **fase 2 (materiali e texture,
@@ -53,7 +53,7 @@ ancora quella, ma adesso vive dentro il gioco.
    richiesta poggia su una diagnosi sbagliata, dirlo. Richiesta sua, testuale: «ogni volta
    che ti do sti comandi cerca di sviluppare un senso critico».
 4. **Ogni file consegnato va rinominato con un numero di versione progressivo**, mai lo
-   stesso nome due volte. La prossima è la **v113**. Nella repo il file si chiama `index.html` e la
+   stesso nome due volte. La prossima è la **v116**. Nella repo il file si chiama `index.html` e la
    versione sta in `VERSIONE`: le consegne fuori dalla repo restano `battlecraft-vNN.html`.
 5. Gli archivi del modello che ha fornito **non contengono licenza**: da verificare sul
    sito di origine prima di qualsiasi pubblicazione.
@@ -276,6 +276,8 @@ tools/browser/              v103: render veri con Edge (non sono test: vedi READ
 test/v110.cjs               v110: curva, nebbia, livelli di qualità, ciclo del giorno, modello analitico, F3, mappa non spostata
 test/v111.cjs               v111: sparo automatico, finestra del nome, scritta della versione
 test/v112.cjs               v112: tappi del castello (spenti, si accendono rompendo, si rispengono), UV nel mondo, ripiego senza GPU
+test/v115.cjs               v115: auto (modello, colori, tetti, sentieri e case, piano, collisioni, porte, piccone)
+test/v114.cjs               v114: estrazione per rarità, forziere (modello, piazzamento, raggio, una volta sola, bottino, danno), medikit
 ```
 
 Strumenti della v110 (in `tools/`, non sono test):
@@ -293,6 +295,13 @@ tools/patch112/                                        la patch della v112 (mate
 tools/browser/texture112.cjs <out.png>                 foglio delle texture generate (colore | normal | rugosità) e ms di generazione
 tools/browser/cuciture112.cjs <cartella> [url] [vista] diagnosi di linee sul castello: normale / senza ombre / magenta senza luci / colore per blocco
 tools/browser/esegui.cjs <script.js> [url]             esegue uno script nella pagina col gioco caricato (riceve G) e stampa il risultato
+tools/logo113/scontorna.cjs <logo.jpg> <uscita> [larg]  scontorna un logo su fondo verde (Edge): logo.png/.webp trasparenti + anteprima
+tools/logo113/applica.cjs                              la patch della v113 (logo nella barra e nei due caricamenti, versione)
+tools/logo113/guarda.cjs [uscita]                      scatti di caricamento, lobby (PC e telefono) e "SI PARTE"
+tools/forziere114/prepara.cjs [in.glb] [out.glb]       v114: forziere di Lorenzo diviso in cassa + coperchio, semplificato (meshoptimizer), texture ridotte
+tools/patch114/                                        la patch della v114 (forzieri.js, applica.cjs)
+tools/macchina115/prepara.cjs [in.obj] [out.glb]       v115: auto di Lorenzo da OBJ a GLB in 3 pezzi (colori, semplificazione)
+tools/patch115/                                        la patch della v115 (auto.js, strade.js, applica.cjs)
 ```
 
 Tempi: ~10 minuti in tutto sul banco di prova del cloud.
@@ -1191,6 +1200,138 @@ generano **la prima volta che la qualità è Media/Alta** (in `scambia112`, chia
 Bassa e non le genera mai, sul PC si pagano 1,6 s alla prima `setQuality('med')` (all'avvio). La lobby non usa questi
 materiali.
 
+### 9.13 Cosa cambia nella v113 — logo nuovo
+
+Richiesta di Lorenzo, testuale: «ti ho messo nuovo logo del gioco». Nella radice c'erano due immagini Gemini: il logo
+(BATTLECRAFT in pietra bianca col martello fra BATTLE e CRAFT, fondo verde) e un foglio di materiali stilizzati (sfere e
+blocchi in Blender, non è un logo: lasciato dov'era, utile come riferimento per le fasi grafiche).
+
+- Originale copiato in `assets/logo/logo-originale.jpg` (2816×1536). `tools/logo113/scontorna.cjs` toglie il verde in Edge:
+  "verdezza" = G - max(R,B) (fondo 47,90,63 → 27; lettere, metallo e legno ~0 o sotto), alfa graduale fra 6 e 0,72×fondo,
+  sui bordi il colore del fondo viene tolto dal miscuglio, poi niente G sopra max(R,B) (via l'alone). L'ombra scura sotto le
+  lettere diventa un'ombra nera semitrasparente. Ritaglio al contenuto, riduzione a metà successive: **960×320 (3:1)**,
+  WebP 41 KB (`assets/logo/logo.webp`, anche PNG e il ritaglio pieno). Visto ingrandito su bianco e magenta: niente alone.
+- Nel gioco (`tools/logo113/applica.cjs`): il WebP sta **una volta sola** come variabile CSS `--logo113` (55 KB di base64
+  nella riga del CSS: tagliare con `cut`), disegnato da `.logoImg` (`aspect-ratio:3/1`, `background-size:contain`) in tre
+  punti: barra della lobby (54 px di altezza, 40 su schermi stretti e al telefono), caricamento iniziale e "SI PARTE"
+  (larghezza del riquadro, 440 px). `role="img"` con `aria-label`. Tolta la scritta a caratteri.
+- Visto nei render (`screen/logo113/`): barra della lobby a 1280×720 e su telefono emulato 844×390 ×3, schermata "SI
+  PARTE". Il manico del martello esce di pochi pixel sotto la barra: voluto, sta bene.
+- Non cambiati: `<title>` e icona (resta Amy).
+
+### 9.14 Cosa cambia nella v114 — forzieri con bottino per rarità, medikit da portare
+
+Richiesta di Lorenzo (testo preparato, con il forziere): apertura dei forzieri col raggio/interazione, una volta sola,
+coperchio che si apre, arma estratta a caso pesata per rarità (comune, rara, epica, leggendaria) con i suoi dati;
+vita e cure con medikit trasportabili (massimo, raccolta, tasto dedicato, mai oltre la vita massima).
+
+**Il modello.** Il testo diceva `.obj`, ma il file nella radice è `forziere_v3.glb` (generatore "Lorenzo chest gen";
+`forziere_v3 - Copia.glb` è identico byte per byte). Era **22 MB, 647.480 triangoli, texture 2048 + 1024, un pezzo solo**:
+dentro l'HTML avrebbe raddoppiato il gioco, e il coperchio non si poteva aprire. `tools/forziere114/prepara.cjs`:
+- divide i **componenti connessi** fra cassa e coperchio. Il giunto è a 0,660 m (il bordo di ferro della cassa finisce a
+  0,657, quello del coperchio comincia a 0,663), ma **non è un piano**: gli archi laterali del coperchio scendono fino a
+  0,632 dentro il bordo della cassa, e le staffe d'angolo della cassa salgono a 0,669. Regola: centro del componente
+  sopra/sotto il giunto, più 4 eccezioni scritte nel file (piastra della serratura e serratura scura col coperchio,
+  tappini degli archi col coperchio, tappini delle staffe con la cassa). Verificato col render esploso.
+- semplifica con **meshoptimizer** (contrazione di spigoli, errore 0,003 = ~4 mm): **8.912 triangoli** (5.364 cassa,
+  3.548 coperchio). A distanza di gioco identico all'originale (render affiancati).
+- mette il nodo `Coperchio` sulla **cerniera** (0; 0,66; −0,427): nel gioco basta ruotarlo su X.
+- texture a 512 (legno) e 256 (ferro) via canvas di Edge. Risultato `assets/forziere114/forziere114.glb`, 352 KB,
+  **298 KB di base64** nell'HTML (`FORZIERE114_B64`). Il materiale `Bagliore` del file originale non è usato da nessuna mesh.
+- **Trappola pagata:** `npm i <pacchetto> --no-save` dentro `tools/forziere114/` risale al `package.json` della radice
+  e **toglie `playwright-core`** (non è nel package.json). Installare sempre i due insieme:
+  `npm i --no-save --no-package-lock playwright-core@1.48.2 meshoptimizer@0.22.0` nella radice.
+
+**Nel gioco** (patch `tools/patch114/applica.cjs` + modulo `tools/patch114/forzieri.js`, parte dalla v113):
+- `Forzieri114`: **18 forzieri** per partita (`FORZIERE114`), vicino ai punti del bottino della mappa, scala 0,8
+  (1,1 × 0,82 m), girati a multipli di 90° (così la collisione a scatola combacia), almeno 28 m l'uno dall'altro,
+  su terreno piano (angoli entro 12 cm), fuori dall'acqua, senza toccare collisioni e **solo su terreno o pavimenti**:
+  il primo giro ne aveva messo uno sopra una roccia (la collisione delle rocce è più grande e piatta del disegno, v106).
+- **Apertura**: tasto Raccogli (X). Bersaglio = forziere colpito dal raggio della telecamera entro 2,4 m dal giocatore,
+  se nessun muro è in mezzo; se no, uno chiuso entro 1,4 m davanti. Ha la precedenza sugli oggetti a terra e la sua
+  scritta ("X Apri il forziere"). Anche controller (tasto raccogli) e telefono (tocco sul forziere).
+- **Una volta sola**: `aperto` si mette nell'istante del tasto, prima dell'animazione: un secondo tasto o un secondo
+  `apri()` non estrae nulla (testato).
+- Coperchio: 108° in 0,55 s con ritorno elastico; a 0,22 s esce l'arma, lanciata verso chi ha aperto (rimbalza come
+  le armi buttate, v109), scintille e bagliore del colore della rarità. Il forziere resta aperto e vuoto.
+- **Estrazione** (`estraiArma114`): prima la rarità (`RARITA114`: comune 50, rara 30, epica 15, leggendaria 5), poi
+  l'arma fra quelle che la ammettono (`BOTTINO114`: fucile 5, pompa 4, precisione 1,5 solo epica/leggendaria).
+  Restituisce `{arma, nome, rarita, nomeRarita, colore, css, moltDanno, danno, caricatore, munizioni, tipoMunizioni}`.
+- **La rarità conta**: la casella dell'inventario diventa `{w, mag, rar}`; danno ×0,90 / 1,00 / 1,08 / 1,16
+  (**stimati**, da provare giocando), anche sui pezzi costruiti. Si conserva buttandola, scambiandola e alla morte;
+  colore della casella, nome nell'interfaccia e anello a terra prendono la rarità. Le armi che c'erano già (iniziale,
+  a terra, dei bot) non hanno rarità e restano esattamente come prima.
+- I bot **non** aprono forzieri.
+
+**Medikit** (`MEDIKIT114`): il "Kit medico" esisteva in `ITEM_DEFS` ma **non usciva mai sulla mappa**. Adesso:
+- se ne portano fino a **3**; raccolti non si consumano (oltre il massimo restano a terra, "Medikit al massimo");
+- tasto **T** (`medikit` in ACTIONS, cambiabile nelle impostazioni), oppure tocco sulla casella ✚ nella barra;
+- cura **+50** dopo **2 s** (barra della ricarica come avanzamento); mai oltre `maxHp` (nuovo, 100: anche `heal()`
+  e la barra della vita lo usano); a vita piena non parte e non consuma; sparare o cambiare modalità la interrompe
+  (il kit resta);
+- 12 medikit a terra per partita, accanto a pozioni e bende; i bot li usano subito (non li portano).
+- Le bende restano com'erano (cura immediata alla raccolta).
+- `test/v109.cjs` controllava il vecchio kit medico (a vita piena resta a terra, a 40 porta a 100): quel controllo ora usa
+  la benda (stessa regola, +15). Suite intera: tutto PASS.
+
+**Test** `test/v114.cjs` (50 controlli, in `run-all`): frequenze su 20.000 estrazioni con seme, armi solo nelle rarità
+ammesse, modello vero con coperchio e cerniera, piazzamento (libero, piano, non in acqua, non su rocce, distanze),
+bersaglio col raggio / muro in mezzo / troppo lontano / di spalle, apertura una volta sola, un'arma sola con la sua
+rarità, coperchio a 108°, rarità in casella e a terra, **danno vero di un colpo leggendario = base × 1,16**, tutti i casi
+dei medikit. L'harness espone `Forzieri114`, `Medikit114`, `spargiMedikit114`; i numeri stanno in `Forzieri114.cfg`.
+
+**Visto nei render** (Edge, partita vera, luci del gioco): forziere chiuso e aperto su un prato, coperchio sulla cerniera,
+fucile di precisione leggendario uscito con l'anello arancione. Non visti: l'animazione in movimento, l'interfaccia
+(scritta, casella ✚) e il telefono. Da provare giocando: frequenza dei forzieri, moltiplicatori del danno, tempo di cura.
+
+### 9.15 Cosa cambia nella v115 — le auto di Lorenzo, un colore per auto, 13 auto sulla mappa
+
+Richiesta di Lorenzo, testuale: «aggiungi anche diverse macchine ho già aggiunto il modello cambia colore diverse volte.
+per la mappa al posto della macchine che già ci sono».
+
+**Il modello**: `macchina_citycar_v4.obj` (32 MB, 570.176 triangoli, 94 pezzi con nomi, 12 materiali per nome, normali,
+niente UV, fronte verso +X, lunga 4,07 m). Il suo `.mtl` **non c'è**: i colori li dà `tools/macchina115/prepara.cjs`
+(tabella MATERIALI). **La prima riga dell'OBJ nomina il gioco di riferimento** (vincolo 1): il commento non viene copiato,
+nel gioco e nella repo non c'è. Lo script: un primitivo per materiale saldato per (posizione, normale), meshoptimizer
+(errore 0,0025, LockBorder sui confini fra materiali), poi **tre pezzi soli**: `carrozzeria` e `tetto` (ritinti nel gioco)
+e `resto` col colore nei vertici (cromo e fari perdono metallo ed emissione, compensati schiarendo fari/led/stop).
+12 materiali x 13 auto erano oltre 150 draw call; così sono 3 per auto. **14.138 triangoli**, `assets/macchina115/macchina115.glb`,
+**364 KB di base64** (`AUTO115_B64`). Render a 12 pezzi e a 3 pezzi: indistinguibili.
+
+**Nel gioco** (patch `tools/patch115/applica.cjs` + `auto.js` + `strade.js`, parte dalla v114):
+- il modello nuovo entra **dentro `World.car()`** al posto del vecchio (`PROPS.auto` ritinto): porte libere
+  (`liberaPorte102`), collisione `tag: 'car'`, piccone (metallo 140) e i test `mondo`/`sovrapposizioni` restano gli stessi.
+  La collisione ora è la scatola giusta anche con l'auto storta (mezza lunghezza 2,03, mezza larghezza 0,95 senza
+  specchietti, alta 1,42). Senza il modello si torna al vecchio.
+- **un colore per auto** (`AUTO115_COLORI`, 14): un materiale per colore, non per auto. Sulle auto chiare (bianca,
+  argento) il tetto diventa scuro, se no sparirebbe. Le tre della città: rossa, blu e gialla (prima erano rossa e **due blu**).
+- **10 auto in più fuori città** (`World.autoStrade115`, numeri in `AUTO115`, elenco in `W.autoDove115`):
+  4 **lungo i sentieri** (parallele al tratto a 3,4 m dalla linea, solo tratti entro 30° da un asse) e 6 **di fianco
+  alle case** (parallele al muro a 1,3 m, mai entro 1,5 m da una porta). Ogni posto: oltre 40 m dal centro città e 40
+  dal castello, in piano (ruote entro 45 cm), fuori dall'acqua, 18 m fra due auto, nessuna collisione, nessun cespuglio
+  (i cespugli non hanno collisione: controllati su `veg.slot`).
+- Totale **13 auto, 13 colori**.
+- **Trappola pagata (detta male a Lorenzo e poi corretta)**: messe prima della vegetazione con un caso a seme proprio,
+  pensavo che alberi e rocce restassero dove erano. Falso: un albero scartato perché il posto è occupato salta i suoi
+  `WRNG`, e tutti quelli dopo slittano: **80 alberi e rocce cambiavano posto in tutta l'isola**, anche a 80 m dalle auto.
+  Adesso le auto si mettono **dopo `makeVegetation()`** ed evitano alberi, rocce e cespugli: il resto della mappa è
+  identico alla v114 (verificato: 0 oggetti spariti, 0 nuovi, 814 cespugli uguali). Lungo i sentieri i posti piani e
+  liberi sono pochi (pesano pendenza, acqua e la città, da cui partono tutti i sentieri), per questo le case.
+- `test/v110.cjs` contava 1.656 oggetti raccoglibili ("mappa identica alla v109"): ora conta 1.656 + le auto aggiunte.
+- L'harness carica il modello (`caricaAuto115` in `init`), quindi tutta la suite prova le auto nuove.
+- `test/colpi107.cjs` spara a braccio e gamba da 5 m di lato nel prato (-60,-8): a 3 m c'è ora un'auto del sentiero e il
+  raggio prendeva lei. Il test toglie le collisioni delle auto entro 10 m dal punto (misura le zone del corpo, non le auto).
+  **Il prato (-60,-8) è il punto di prova di v111, v114 e colpi107**: chi aggiunge oggetti lì vicino ricontrolli quei test.
+
+**Test** `test/v115.cjs` (18 controlli): modello (3 pezzi, <20.000 triangoli), tutte col modello nuovo, ≥8 fuori città
+con entrambi i tipi di posto, colori tutti diversi, carrozzeria del colore giusto, tetto scuro solo sulle chiare,
+parallele al sentiero o al muro (0,5-2,5 m), in piano, fuori dall'acqua, distanze, nessuna dentro collisioni o davanti a
+porte, collisione che contiene la carrozzeria, piccone.
+
+**Visto nei render** (`screen/auto115/`): auto blu in città, verde e bianca (tetto scuro) e arancione lungo i sentieri,
+verde lime accanto a una casa di mattoni, grigia accanto a una casa col portico. Non visto: auto distrutta col piccone in
+partita, telefono.
+
 ### Cosa non è verificato (detto dal LEGGIMI stesso, e vero)
 
 - **nessuno ha visto la v93 renderizzata** tranne, eventualmente, Lorenzo
@@ -1403,4 +1544,13 @@ sole e nuvole nuove, nebbia d'altezza, post-processing in Media/Alta (AO, bloom,
 triplanare sulle rocce, sporco alla base dei muri, schiuma sulle rive, normal del castello dal suo disegno; tappi del
 castello spenti finché non serve (spariscono le "divisioni" sui muri) (sezione 9.12).
 
-**Prossima consegna: v113** (fase grafica 3: geometria e dettagli del mondo).
+**v113**: logo nuovo di Lorenzo (martello + BATTLECRAFT in pietra) nella barra della lobby e nei caricamenti
+(sezione 9.13).
+
+**v114**: forzieri di Lorenzo con bottino casuale per rarità (comune/rara/epica/leggendaria, cambia il danno), medikit da
+portare (3, tasto T, +50 in 2 s) (sezione 9.14).
+
+**v115**: le auto di Lorenzo al posto delle vecchie, un colore per auto, 10 auto in più lungo i sentieri e accanto alle case (13 in tutto)
+(sezione 9.15).
+
+**Prossima consegna: v116** (fase grafica 3: geometria e dettagli del mondo).

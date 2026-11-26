@@ -91,9 +91,10 @@ const { load, THREE: T } = require('./harness.cjs'); const assert = require('ass
   { p.ammo.light = 995; const it = vicino('ammoLight'); ok.munizioni = I.canUse(p, it) && I.pickup(p, it) && p.ammo.light === 1055; }
 
   // 8. cure e scudi: a vita/scudo pieni restano a terra
-  { p.hp = 100; p.shield = 100; const m = vicino('medkit'), s = vicino('shieldL');
+  // v114: il medikit ora si porta nello zaino (test/v114.cjs); la regola 'a vita piena resta a terra' vale per la benda
+  { p.hp = 100; p.shield = 100; const m = vicino('bandage'), s = vicino('shieldL');
     const bloccati = !I.pickup(p, m) && !I.pickup(p, s) && I.list.includes(m) && I.list.includes(s) && I.motivo109(p, m) === 'Vita già piena';
-    p.hp = 40; const cura = I.pickup(p, m) && p.hp === 100; ok.cure = bloccati && cura; I.remove(s); }
+    p.hp = 40; const cura = I.pickup(p, m) && p.hp === 55; ok.cure = bloccati && cura; I.remove(s); }   // benda: +15
 
   // 9. bot: niente doppioni
   { const b = G.bots[0]; b.alive = true; b.pos.set(p.pos.x + 1, p.pos.y, p.pos.z); const it = vicino(b.hasWeapon('ar') ? 'ar' : b.inv.find((s) => s).w);

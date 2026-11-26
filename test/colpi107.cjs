@@ -18,7 +18,11 @@ const { load, THREE: T } = require('./harness.cjs'); const assert = require('ass
   const P = G.physics, p = G.player, b = G.bots[0], W = A.WEAPONS, r = {}; p.air88 = null; b.air88 = null;
   for (const o of G.bots) if (o !== b) o.alive = false;
   const at = (ch, x, z) => { ch.pos.set(x, 0, z); ch.pos.y = P.supportHeight(x, z, 60); ch.vel.set(0, 0, 0); ch.onGround = true; };
-  const X = -60, Z = -8; at(b, X, Z); at(p, X, Z - 5); b.yaw = 0;
+  const X = -60, Z = -8;
+  // v115: lungo il sentiero, a 3 m da qui, c'e' un'auto parcheggiata: i raggi di lato (braccio, gamba) partono da 5 m e la
+  // prenderebbero prima del bot. Il test misura le zone del corpo, non le auto: si tolgono quelle vicine
+  for (const h of G.world.harvestables) if (h.col && h.col.tag === 'car' && Math.hypot(h.x - X, h.z - Z) < 10) P.remove(h.col);
+  at(b, X, Z); at(p, X, Z - 5); b.yaw = 0;
   // il bot appena creato puo' essere ancora nella posa del lancio: un secondo fermo a terra lo rimette in piedi
   for (let k = 0; k < 60; k++) { b.onGround = true; b.vel.set(0, 0, 0); b.animate(1 / 60); p.animate(1 / 60); }
   const m = b.model; m.group.updateWorldMatrix(true, true); const wp = (o) => o.getWorldPosition(new T.Vector3());

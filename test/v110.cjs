@@ -87,7 +87,8 @@ let ok = 0, ko = 0; const prova = (nome, cond, info) => { if (cond) { ok++; cons
     const Gw = Object.create(A.Game.prototype); Object.assign(Gw, { scene: new T.Scene(), physics: new A.Physics(), state: 'title', chars: [], bots: [] }); Gw.scene.fog = new T.Fog(0, 50, 80);
     const W = new A.World(Gw); W.build();
     prova('16 nuvole col materiale nuovo', W.clouds.children.length === 16 && W.clouds.children.every((m) => m.material === W.nuvole110));
-    prova('mappa identica alla v109 (1656 oggetti raccoglibili, 31 case)', W.harvestables.length === 1656 && W.houses92.length === 31, [W.harvestables.length, W.houses92.length]);
+    // v115: le auto lungo i sentieri si aggiungono dopo la vegetazione: tolte quelle, la mappa e' identica alla v109
+    prova('mappa identica alla v109 (1656 oggetti raccoglibili + auto dei sentieri v115, 31 case)', W.harvestables.length - (W.autoStrade115N || 0) === 1656 && W.houses92.length === 31, [W.harvestables.length, W.autoStrade115N, W.houses92.length]);
     prova('cielo coi parametri del ciclo (uSole tenuto per la prova grafica)', !!(W.sky.material.uniforms.uZen && W.sky.material.uniforms.uSole && W.sky.material.toneMapped !== false));
   }
   console.log(ko ? 'FALLITI ' + ko + ' su ' + (ok + ko) : 'TUTTI PASS (' + ok + ')'); process.exit(ko ? 1 : 0);
