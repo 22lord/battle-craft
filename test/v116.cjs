@@ -103,9 +103,33 @@ let ok = 0, ko = 0; const prova = (nome, cond, info) => { if (cond) { ok++; cons
   g.connesso = true; R.update(1 / 60);
   prova('riconnesso: etichetta normale', r.tag.userData.testo116 === 'Amico');
 
-  // colpi: per ora non lo feriscono (danni in rete = fase successiva)
-  ch.takeDamage(50, p, null);
-  prova('i colpi sull\'altro non contano (ancora)', ch.hp === 100 && ch.alive);
+  // v117: un colpo mio sull'altro (fuori da uno sparo = piccone) va al server; la sua vita la cambia solo il server
+  mandati.length = 0; ch.takeDamage(20, p, null);
+  prova('colpo sull\'altro: va al server, la vita locale non cambia', ch.hp === 100 && ch.alive && mandati.some(([t, m]) => t === 'piccone' && m.a === 'lui' && m.d === 20), mandati);
+  mandati.length = 0; ch.takeDamage(20, null, null);
+  prova('colpi non miei sull\'altro: niente', mandati.length === 0 && ch.hp === 100);
+  // uno sparo mio che lo prende: un solo messaggio "sparo" con il colpo dentro
+  mandati.length = 0; p.yaw = Math.atan2(ch.pos.x - p.pos.x, ch.pos.z - p.pos.z);
+  G.combat.tryFire = G.combat.tryFire;   // gia' avvolto da Rete116.aggancia (in startMatch)
+  { const R0 = G.rete116; R0._sparo = { punti: [], colpi: [], arma: 'ar' }; ch.takeDamage(23, p, null); const sp = R0._sparo; R0._sparo = null; R0.chiudiSparo(p, sp); }
+  const sp0 = mandati.find(([t]) => t === 'sparo');
+  prova('sparo: un messaggio col colpo dentro (chi, danno, zona)', sp0 && sp0[1].arma === 'ar' && sp0[1].c.length === 1 && sp0[1].c[0].a === 'lui' && sp0[1].c[0].d === 23 && sp0[1].o.length === 3, sp0);
+  // la vita dell'altro arriva dallo stato del server
+  g.hp = 41; g.scudo = 10; R.update(1 / 60);
+  prova('vita e scudo dell\'altro letti dallo stato', ch.hp === 41 && ch.shield === 10, [ch.hp, ch.shield]);
+  // la mia vita dallo stato: scende -> vignetta
+  giocatori.get('io').inGioco = true; giocatori.get('io').hp = 60; giocatori.get('io').scudo = 0; giocatori.get('io').vivo = true; G.time = 5;
+  R.update(1 / 60);
+  prova('la mia vita viene dal server (e la vignetta si accende)', p.hp === 60 && p.lastDamageT === 5, [p.hp, p.lastDamageT]);
+  p.takeDamage(30, null, null);
+  prova('in locale nessuno mi ferisce (decide il server)', p.hp === 60);
+  // eliminazione annunciata dal server
+  R.riceviEliminato({ v: 'lui', k: 'io', arma: 'ar' });
+  prova('eliminato dal server: l\'altro cade, l\'uccisione e\' mia', !ch.alive && p.kills === 1, [ch.alive, p.kills]);
+  g.vivo = false; g.hp = 0; R.update(1 / 60);
+  prova('dopo l\'annuncio, lo stato "morto" non lo ricrea', r.ch === ch && !ch.alive);
+  g.vivo = true; g.hp = 100; R.update(1 / 60); R.update(1 / 60);
+  prova('partita nuova (morto -> vivo nello stato): ricreato in piedi', r.ch && r.ch !== ch && r.ch.alive, r.ch && r.ch.alive);
 
   // niente tempesta online: anche fuori dall'area la vita resta
   G.zone.radius = 1; G.zone.center.set(500, 0, 500); G.drop88.elapsed = 999; G.state = 'playing';

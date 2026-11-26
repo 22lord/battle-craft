@@ -4,11 +4,11 @@ Documento di passaggio di consegne. Serve a riprendere in una chat nuova senza r
 da zero e senza rifare errori già pagati.
 
 Autore: Lorenzo Deda (@22lordd), Napoli.
-Stato al 26 novembre 2026: **battlecraft v116**, un solo file HTML (`index.html` nella repo) + il **server multiplayer** in `server/` (sezione 9.16, guida in `docs/ONLINE.md`). Gioco e isola sono
+Stato al 26 novembre 2026: **battlecraft v117**, un solo file HTML (`index.html` nella repo) + il **server multiplayer** in `server/` (sezioni 9.16 e 9.17, guida in `docs/ONLINE.md`). Gioco e isola sono
 **fusi**: l'isola della vecchia "mappa" è il terreno della partita.
 
-Versione del contesto: v12. Le v94-v97 non sono mai arrivate in chat:
-le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8, v109 in 9.9, v110 in 9.10, v111 in 9.11, v112 in 9.12, v113 in 9.13, v114 in 9.14, v115 in 9.15, v116 in 9.16.
+Versione del contesto: v13. Le v94-v97 non sono mai arrivate in chat:
+le differenze v93→v98 sono in 9.1, v99→v102 in 9.2, v103 in 9.3, v104 in 9.4, v105 in 9.5, v106 in 9.6, v107 in 9.7, v108 in 9.8, v109 in 9.9, v110 in 9.10, v111 in 9.11, v112 in 9.12, v113 in 9.13, v114 in 9.14, v115 in 9.15, v116 in 9.16, v117 in 9.17.
 
 **Dalla v110 la grafica procede a fasi** (prompt in `docs/PROMPT-GRAFICA.md`, una fase per sessione, piano
 prima e ok di Lorenzo). Fatte: **fase 1 (luce, cielo, post-processing)** e **fase 2 (materiali e texture,
@@ -53,7 +53,7 @@ ancora quella, ma adesso vive dentro il gioco.
    richiesta poggia su una diagnosi sbagliata, dirlo. Richiesta sua, testuale: «ogni volta
    che ti do sti comandi cerca di sviluppare un senso critico».
 4. **Ogni file consegnato va rinominato con un numero di versione progressivo**, mai lo
-   stesso nome due volte. La prossima è la **v117**. Nella repo il file si chiama `index.html` e la
+   stesso nome due volte. La prossima è la **v118**. Nella repo il file si chiama `index.html` e la
    versione sta in `VERSIONE`: le consegne fuori dalla repo restano `battlecraft-vNN.html`.
 5. **Il modello del personaggio l'ha fatto Lorenzo con Meshy** (detto da lui il 26/11/2026, v116): non viene da un sito
    di terzi, la questione licenza è chiusa. (Meshy: col piano gratuito i modelli escono in CC BY 4.0, cioè va citato
@@ -306,6 +306,8 @@ tools/patch114/                                        la patch della v114 (forz
 tools/macchina115/prepara.cjs [in.obj] [out.glb]       v115: auto di Lorenzo da OBJ a GLB in 3 pezzi (colori, semplificazione)
 tools/patch115/                                        la patch della v115 (auto.js, strade.js, applica.cjs)
 tools/patch116/                                        la patch della v116 (rete.js, applica.cjs)
+tools/patch117/                                        la patch della v117: SOSTITUISCE il modulo di rete intero con il suo rete.js
+tools/browser/online117.cjs <out> [url] [server]       v117: TRE Edge separati, A spara a B fino a eliminarlo, C guarda (15 controlli)
 tools/browser/statico.cjs [porta] [cartella]           server statico in Node (8123 = repo, 8124 dist = come su Vercel)
 tools/browser/online116.cjs <out> [url] [server]       v116: DUE Edge separati nella stessa stanza, 27 controlli + scatti da tutti e due
 tools/vercel/prepara.cjs                               v116: dist/index.html con l'indirizzo del server (BATTLECRAFT_SERVER_URL), rifiuta localhost
@@ -554,7 +556,15 @@ entro 5 mm dall'ancoraggio.
     ma col guinzaglio del suo orologio (niente tempo dichiarato in anticipo, niente tempo accumulato stando zitti).
 47. **Alla riconnessione il client rimanda `inGioco = true`**: il server rimetteva il giocatore allo spawn e poi lo correggeva
     (2,5 m indietro). Lo spawn si rifà solo nel passaggio lobby → partita.
-48. **Server lasciati accesi in background** (2567 Colyseus, 8123/8124 statici): per riavviare col codice nuovo va ucciso il
+48. **L'annuncio `eliminato` arriva PRIMA della patch dello stato** (i messaggi partono subito, lo stato a ogni patch): per
+    un attimo l'eliminato risulta "a terra ma vivo nello stato" e il codice della partita nuova lo ricreava in piedi. La
+    partita nuova si riconosce solo dal passaggio morto → vivo visto nello stato (`r.vivoPrec`).
+49. **All'avvio della partita il browser è fermo a compilare la grafica**: il primo pacchetto arriva in ritardo e tutti i
+    seguenti sembrano "in anticipo" per il guinzaglio dell'orologio (correzione "orologio" a ogni client). Credito di 1 s
+    che si ricarica a 0,1 s/s (`creditoMs`).
+50. **Messaggi inviati in un test con `ts` inventati** (`performance.now() + 5000`): il guinzaglio dell'orologio li
+    rifiuta (giustamente) e i test dopo falliscono a cascata. Nei test `ts` veri.
+51. **Server lasciati accesi in background** (2567 Colyseus, 8123/8124 statici): per riavviare col codice nuovo va ucciso il
     processo sulla porta (`netstat -ano | grep :2567`, poi `taskkill //PID n //F`), se no il nuovo muore con EADDRINUSE.
 
 ---
@@ -1409,6 +1419,39 @@ distingue il nome.
 **Fasi successive** (in ordine): danni fra giocatori con colpi validati dal server; bus/tempesta condivisi; costruzioni e
 raccolta; oggetti a terra e forzieri.
 
+### 9.17 Cosa cambia nella v117 — multiplayer fase 2: 10 giocatori, spari e danni
+
+Richiesta di Lorenzo dopo la prima partita vera con un amico (testuale): «le build degli altri giocatori per me non
+esistono. non partiamo direttamente dal bus. vorrei la possibilità di riempire la lobby con bot. ho sparato 300 volte il
+mio amico e non è morto. non lho visto manco sparare. non vedo manco il mio amico volare col deltaplano. e poi si vorrei
+server in europa», poi «vorrei anche ci fossero almeno 10 giocatori online». Piano a fasi concordato: 0 Europa,
+1 spari e danni, 2 bus + deltaplano, 3 costruzioni, 4 bot (li simula il client di chi crea la stanza). **Questa versione
+fa la 0 e la 1** (+ 10 giocatori).
+
+- **10 giocatori** (`REGOLE.maxGiocatori`, `RETE116.max`): 10 posti di partenza nel prato a ovest della città (griglia a 2 m
+  sulla mappa vera, almeno 7 m fra loro), lobby "Online n/10" e nomi di tutti.
+- **Spari e danni, la vita sta sul server.** `Rete116.aggancia()` avvolge `Combat.tryFire` e `FX.tracer` (una volta): durante
+  uno sparo del giocatore raccoglie i punti d'arrivo dei pallini e i colpi sugli altri (`takeDamage` dei remoti =
+  `dannoRemoto`: calcola la divisione scudo/vita per hitmarker e numeri, NON tocca la vita) e manda **un messaggio `sparo`**
+  { arma, bocca, punti, colpi }. Il server (`riceviSparo`): ritmo di fuoco a secchiello per arma (raffica 3), portata +10 m,
+  angolo fra yaw del tiratore e bersaglio ≤ 75° (oltre 4 m), danno per pallino ≤ danno x zona max x 1,16 (`ARMI_DANNO`: copia
+  dei numeri di WEAPONS, **se cambiano le armi va cambiata anche lì**), poi `applicaDanno` (come takeDamage) e gira lo sparo
+  agli altri: fiammata, scie, sangue, suono 3D, rinculo. Piccone: messaggio `piccone`, ≤ 5 m, 3 colpi/s.
+  Il mio `takeDamage` in online non fa niente: la mia vita la leggo dallo stato (`vitaMia`, vignetta se scende).
+  Eliminazione: il server manda `eliminato` {v, k, arma} e ognuno chiama la `G.onDeath` di sempre (feed, armi a terra,
+  "Eliminato"/vittoria). Partita nuova (lobby → Gioca): vita 100 sul server.
+- Ricarica e colpi di piccone dell'altro: campi `ricarica` e `sw` (contatore) nello stato.
+- **Server in Europa**: `render.yaml` con `region: frankfurt`. Render non cambia la regione di un servizio esistente:
+  Lorenzo deve cancellarlo e riapplicare il Blueprint (`docs/ONLINE.md`).
+
+**Misurato**: `server/test/stanza.mjs` 45/45 (10 giocatori + l'undicesimo rifiutato, colpo valido -23, danno gonfiato
+tagliato a 44, 30 spari di precisione in un istante → ne passano 3, colpo di spalle scartato, eliminazione con annuncio e
+uccisione, eliminato che non fa danno, vita piena alla partita nuova, piccone da 10 m scartato, avvio con primo pacchetto in
+ritardo senza correzioni). `tools/browser/online117.cjs` con **tre Edge separati**: 15/15 (vita di B uguale sul server e sui
+tre schermi, B e C vedono scie e fiammate di A, eliminazione nel feed di tutti, B "Eliminato", A e C restano in partita,
+B rientra con vita piena). `test/v116.cjs` 44/44 (colpi e vita lato client con stanza finta).
+**Non visto**: partita vera fra PC diversi con la v117 (serve il server nuovo online), telefono.
+
 ### Cosa non è verificato (detto dal LEGGIMI stesso, e vero)
 
 - **nessuno ha visto la v93 renderizzata** tranne, eventualmente, Lorenzo
@@ -1632,4 +1675,7 @@ portare (3, tasto T, +50 in 2 s) (sezione 9.14).
 **v116**: multiplayer online — server Colyseus in `server/`, stanze da 2 con codice e link, l'altro giocatore animato dal sistema
 esistente, nomi, riconnessione, validazione sul server, pubblicazione Vercel + Render (sezione 9.16, `docs/ONLINE.md`).
 
-**Prossima consegna: v117** (multiplayer fase 2: danni fra giocatori; oppure fase grafica 3: geometria e dettagli del mondo).
+**v117**: multiplayer fase 2 — fino a 10 giocatori, spari e danni fra giocatori con la vita sul server, spari visibili,
+eliminazioni; server a Francoforte (sezione 9.17).
+
+**Prossima consegna: v118** (multiplayer fase 2b: partenza dal bus insieme + deltaplano visibile; poi costruzioni, poi bot).

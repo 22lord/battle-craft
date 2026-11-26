@@ -1,4 +1,6 @@
 # Server multiplayer su Render (Blueprint): New + > Blueprint > questa repo.
+# v117: regione Francoforte (Europa): ping piu' basso dall'Italia. La regione di un servizio gia' creato
+# non si cambia: va cancellato quello vecchio e riapplicato il Blueprint (docs/ONLINE.md).
 # Il piano free si addormenta dopo 15 minuti senza visite: la prima connessione puo' metterci ~1 minuto.
 services:
   - type: web
@@ -6,6 +8,7 @@ services:
     runtime: node
     rootDir: server
     plan: free
+    region: frankfurt
     buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /

@@ -1,11 +1,12 @@
 # Battlecraft online — come funziona e come si pubblica
 
-Dalla **v116** si gioca in due via Internet: uno crea la stanza, l'altro apre il link. Nessuna LAN,
+Dalla **v116** si gioca via Internet: uno crea la stanza, gli altri aprono il link. Dalla **v117** fino a **10 giocatori**,
+con spari e danni fra giocatori. Nessuna LAN,
 nessun download, nessuna configurazione per i giocatori.
 
 ```
 Browser A ──WebSocket──┐
-                       ├── server Colyseus (cartella server/, Node) — stanza da 2, codice di 4 caratteri
+                       ├── server Colyseus (cartella server/, Node) — stanza fino a 10, codice di 4 caratteri
 Browser B ──WebSocket──┘
        ▲
        └── la pagina (index.html) sta su Vercel
@@ -22,9 +23,14 @@ Browser B ──WebSocket──┘
 Se cade la connessione il gioco si riconnette da solo; il server tiene il posto per **30 secondi**.
 Anche ricaricando la pagina, Entra con lo stesso codice rientra nello stesso posto.
 
-## Cosa c'è nella prima versione (v116)
+## Cosa c'è (v116 + v117)
 
-- stanze con codice, massimo 2 giocatori, il terzo è rifiutato
+- stanze con codice, massimo **10 giocatori** (v117; nella v116 erano 2), l'undicesimo è rifiutato
+- **spari e danni** (v117): chi spara fa il suo colpo come sempre e manda al server chi ha preso; il server controlla
+  ritmo di fuoco, portata, che fosse voltato verso il bersaglio e il danno massimo dell'arma, poi toglie scudo e vita.
+  **La vita di tutti sta sul server.** Gli altri vedono fiammata, scie e impatti e sentono lo sparo dalla posizione giusta.
+  Eliminazione: feed per tutti, armi a terra, "Eliminato" per chi muore; tornando in lobby e rigiocando si riparte con vita piena.
+- ricarica e colpi di piccone si vedono sull'altro; il piccone fa danno solo da vicino (controllato dal server)
 - posizione, rotazione, velocità sincronizzate; camminata, corsa, salto, accovacciamento e idle li calcola
   l'animazione del gioco già esistente dai dati ricevuti (nessun sistema di movimento nuovo)
 - arma in mano, piccone, mira
@@ -33,8 +39,8 @@ Anche ricaricando la pagina, Entra con lo stesso codice rientra nello stesso pos
   troppi messaggi, orologio truccato. Se un movimento non va, rimanda il giocatore all'ultima posizione buona.
 - modalità di prova: **niente bot, bus, tempesta e bottino** (andrebbero fuori sincronia fra i due).
 
-**Non ancora**: danni fra giocatori (i colpi sull'altro non contano), costruzioni, raccolta, bus e tempesta
-condivisi, oggetti a terra. Sono le fasi successive.
+**Non ancora** (fasi successive, in quest'ordine): **partenza dal bus** insieme e deltaplano visibile, **costruzioni**
+condivise, **bot** per riempire la partita; poi oggetti a terra, forzieri e alberi/rocce picconati.
 
 ## Pubblicazione
 
@@ -69,6 +75,17 @@ Node e WebSocket: Railway, Fly.io, un VPS). Tutti e due si collegano alla repo G
 Su Render, nel servizio: **Environment** → `ORIGINI_CONSENTITE` = `https://battle-craft.vercel.app`
 (l'indirizzo di Vercel, più d'uno separati da virgola). Senza, qualsiasi pagina può creare stanze sul tuo server.
 
+### Spostare il server in Europa (Francoforte) — v117
+
+`render.yaml` chiede la regione `frankfurt`, ma Render **non cambia la regione** di un servizio già creato: va rifatto.
+
+1. Render → **battlecraft-server** → **Settings** → in fondo **Delete Web Service** → scrivi il nome per confermare.
+2. Menu a sinistra **Blueprints** → il blueprint di `battle-craft` → **Manual Sync** (o **Sync**). Ricrea `battlecraft-server`
+   a Francoforte. In alternativa: **+ New → Blueprint →** `battle-craft` come la prima volta.
+3. Quando è **Live**, guarda l'indirizzo in alto. Se è ancora `https://battlecraft-server.onrender.com` non serve altro;
+   se è diverso, su Vercel aggiorna `BATTLECRAFT_SERVER_URL` (con `wss://`) e fai **Redeploy**.
+4. Rimetti `ORIGINI_CONSENTITE` sul servizio nuovo (punto 3 qui sopra).
+
 ### Ordine delle cose
 
 Prima Render (serve il suo indirizzo), poi Vercel (con quell'indirizzo), poi `ORIGINI_CONSENTITE` su Render
@@ -89,9 +106,10 @@ Aperta da localhost la pagina usa da sola `ws://localhost:2567`. Per provare un 
 
 | comando | cosa prova |
 |---|---|
-| `cd server && npm test` | regole del server (senza rete) + **due client veri** via WebSocket: codice, terzo rifiutato, sync, teletrasporto corretto, riconnessione, uscita |
+| `cd server && npm test` | regole del server (senza rete) + **client veri** via WebSocket: codice, 10 giocatori e l'undicesimo rifiutato, sync, teletrasporto corretto, colpi/danni/ritmo di fuoco/eliminazione, riconnessione, uscita |
 | `cd server && node test/stanza.mjs wss://indirizzo` | lo stesso contro un server già acceso, anche quello online |
 | `node test/v116.cjs` | la parte nel gioco con una stanza finta (fa parte di `node test/run-all.cjs`) |
+| `node tools/browser/online117.cjs <uscita> [url-gioco] [url-server]` | **tre Edge separati**: A spara a B fino a eliminarlo, C guarda (vita uguale su tutti, scie e fiammate viste, feed, "Eliminato", rientro) |
 | `node tools/browser/online116.cjs <uscita> [url-gioco] [url-server]` | **due Edge separati** sulla stessa stanza: si vedono, corrono, saltano, si accovacciano, cambiano arma, uno perde la connessione e rientra; scatti da tutti e due |
 
 Per simulare Internet: `COLYSEUS_LATENCY=150 npm start` (150 ms andata e ritorno).
